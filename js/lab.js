@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.min.js';
 import {OrbitControls} from '../vendor/OrbitControls.js';
+import {pressureMaterial,setPressureField} from './pressure-map.js';
 const $=id=>document.getElementById(id);
 function airfoil(){
   const profile=[],result=[];
@@ -23,6 +24,14 @@ function start(){
   const grid=new THREE.GridHelper(16,64,0x58728c,0x3d556e);grid.position.y=-2.2;scene.add(grid);
   const mat=new THREE.MeshStandardMaterial({color:0x8ba9b9,metalness:.45,roughness:.34,side:THREE.DoubleSide});
   const model=new THREE.Mesh(new THREE.BufferGeometry(),mat);scene.add(model);
+  const heat=pressureMaterial();
+  let pressureReady=false;
+  function syncSurface(){
+    const show=pressureReady && $('heat').checked;
+    model.material=show?heat:mat;
+    model.material.wireframe=$('wire').checked;
+    $('heatLegend').hidden=!show;
+  }
   let solveWorker,readWorker,timer,running=true,phase=0,paths=[],statusText='',importError='';
   const line=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.45}));
   const dots=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0xb9f4e6,size:.036}));scene.add(line,dots);
@@ -32,7 +41,10 @@ function start(){
   function status(){ $('message').textContent=importError||statusText }
   function solve(){
     solveWorker?.terminate();solveWorker=new Worker(new URL('./flow-worker.js',import.meta.url));statusText='Computing flow field…';status();const geom=model.geometry.clone().rotateZ(model.rotation.z);
-    solveWorker.onmessage=e=>{paths=e.data;const coords=[],colors=[];
+    const job=solveWorker;
+    solveWorker.onmessage=e=>{
+      if(job!==solveWorker)return;
+      paths=e.data.paths;setPressureField(heat,e.data.pressure);pressureReady=true;syncSurface();const coords=[],colors=[];
       for(const path of paths)for(let i=4;i<path.length;i+=4)for(const t of [i-4,i]){
         coords.push(path[t],path[t+1],path[t+2]);
         const shade=THREE.MathUtils.clamp((path[t+3]-.25)/1.25,0,1)*(flowColors.length-1);
@@ -43,10 +55,10 @@ function start(){
       line.geometry.dispose();line.geometry=new THREE.BufferGeometry();line.geometry.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));line.geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       dots.geometry.dispose();dots.geometry=new THREE.BufferGeometry();dots.geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*paths.length*4),3));dots.frustumCulled=false;
       statusText='Flow field ready';status();solveWorker.terminate();solveWorker=null;
-    };solveWorker.onerror=()=>{statusText='Solver failed. Adjust the angle to retry.';status()};
+    };solveWorker.onerror=()=>{if(job!==solveWorker)return;statusText='Solver failed. Adjust the angle to retry.';status()};
     const a=geom.attributes.position.array;solveWorker.postMessage(a,[a.buffer]);geom.dispose();
   }
-  function updateAngle(){model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();timer=setTimeout(solve,100)}
+  function updateAngle(){pressureReady=false;syncSurface();model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();solveWorker=null;timer=setTimeout(solve,100)}
   function setModel(vertices,name){model.geometry.dispose();model.geometry=new THREE.BufferGeometry();model.geometry.setAttribute('position',new THREE.BufferAttribute(vertices,3));model.geometry.computeVertexNormals();$('meshName').textContent=name;$('triCount').textContent=(vertices.length/9).toLocaleString();updateAngle()}
   function load(file){
     if(!file)return;readWorker?.terminate();readWorker=null;importError='';
@@ -59,7 +71,7 @@ function start(){
   $('file').onchange=e=>{load(e.target.files[0]);e.target.value=''};
   const drop=$('drop');for(const type of ['dragover','dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.toggle('over',type==='dragover');if(type==='drop')load(e.dataTransfer.files[0])});
   $('angle').oninput=updateAngle;$('speed').oninput=()=>{$('speedValue').value=$('speed').value+' m/s';$('pressure').textContent=Math.round(.5*1.225*$('speed').value**2)+' Pa'};
-  $('wire').onchange=e=>mat.wireframe=e.target.checked;$('traces').onchange=e=>{dots.visible=line.visible=e.target.checked};$('pause').onclick=()=>{running=!running;$('pause').textContent=running?'Pause flow':'Resume flow'};
+  $('heat').onchange=syncSurface;$('wire').onchange=syncSurface;$('traces').onchange=e=>{dots.visible=line.visible=e.target.checked};$('pause').onclick=()=>{running=!running;$('pause').textContent=running?'Pause flow':'Resume flow'};
   setModel(airfoil(),'Reference airfoil');const clock=new THREE.Clock();
   new ResizeObserver(()=>{const el=renderer.domElement;renderer.setSize(el.clientWidth,el.clientHeight,false);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix()}).observe(renderer.domElement);
   renderer.setAnimationLoop(()=>{const dt=Math.min(.06,clock.getDelta());if(running)phase+=dt*Number($('speed').value)*.65;

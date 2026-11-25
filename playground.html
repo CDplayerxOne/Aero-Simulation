@@ -52,6 +52,12 @@
           <input id="angle" type="range" min="-25" max="25" value="4">
         </div>
         <label class="check">Show streamlines <input id="traces" type="checkbox" role="switch" checked></label>
+        <label class="check">Pressure heatmap <input id="heat" type="checkbox" role="switch" aria-controls="heatLegend"></label>
+        <div id="heatLegend" hidden>
+          <span>Estimated pressure coefficient · Cₚ</span>
+          <div class="heat-scale" aria-hidden="true"></div>
+          <div class="heat-labels"><span>−2.0</span><span>−0.5</span><span>+1.0</span></div>
+        </div>
         <label class="check">Show wireframe <input id="wire" type="checkbox" role="switch"></label>
         <div class="lab-buttons">
           <button class="button primary" id="pause">Pause flow</button>

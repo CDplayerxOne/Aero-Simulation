@@ -59,5 +59,16 @@ self.onmessage=({data})=>{
       const dt=.065/s;v=sample(x+v[0]*dt/2,y+v[1]*dt/2,z+v[2]*dt/2);if(!v)break;x+=dt*v[0];y+=dt*v[1];z+=dt*v[2]}
     if(path.length>=8)paths.push(new Float32Array(path));
   }
-  self.postMessage(paths,paths.map(p=>p.buffer));
+  // Bernoulli pressure coefficient for a freestream-normalized velocity field.
+  // Green carries fluid coverage so interpolation excludes solid cells.
+  const texels=new Uint8Array(n*4);
+  for(let q=0;q<n;q++){
+    if(solid[q])continue;
+    const u=3*q;
+    const cp=1-(vel[u]**2+vel[u+1]**2+vel[u+2]**2);
+    texels[4*q]=Math.round(255*Math.max(0,Math.min(1,(cp+2)/3)));
+    texels[4*q+1]=255;
+  }
+  const pressure={texels,dimensions:[nx,ny,nz],origin:[x0,y0,z0],spacing:h};
+  self.postMessage({paths,pressure},[texels.buffer,...paths.map(p=>p.buffer)]);
 };
