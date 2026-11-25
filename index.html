@@ -1,9 +1,73 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#111c2a"><meta name="description" content="Race three circuits or explore the aerodynamics of your own mesh in the Groundline wind tunnel."><title>Groundline · Aerodynamics</title><link rel="icon" href="brand.svg"><link rel="stylesheet" href="style.css"></head>
-<body><header class="site-header"><div class="wrap nav-inner"><a class="wordmark" href="./" aria-label="Groundline home"><img src="brand.svg" width="43" height="32" alt="">Groundline</a><nav aria-label="Main navigation"><a class="current" href="./" aria-current="page">Overview</a><a href="drive.html">Drive</a><a href="#simulate">Simulate</a></nav></div></header>
-<main><section class="hero" aria-labelledby="hero-title"><img class="hero-photo" src="assets/hero.webp" alt="The lime and navy Groundline Formula car in a wind tunnel" fetchpriority="high"><div class="hero-shade"></div><div class="wrap hero-inner"><div class="hero-copy"><div class="eyebrow hero-eyebrow"><span></span> MOTORSPORT SIMULATION</div><h1 id="hero-title">Groundline<br><em>Aerodynamics</em></h1><p>A driving circuit and an aerodynamics lab.<br>Take the wheel or put your designs to the test.</p><a class="button primary" href="drive.html"><svg class="icon"><use href="#wheel"/></svg>Enter the garage</a></div><div class="photo-caption"><span></span> GROUNDLINE FORMULA / NO. 22</div></div></section>
-<section class="modes wrap" aria-labelledby="modes-title"><div class="section-heading"><div><div class="eyebrow section-eyebrow"><span></span> DRIVE &amp; SIMULATE</div><h2 id="modes-title">Choose your experience</h2></div></div>
-<div class="cards"><article class="mode-card" id="drive"><div class="art"><img src="assets/drive.webp" alt="An open-wheel Formula car cornering on track"><span class="image-label"><svg class="icon"><use href="#flag"/></svg> CIRCUIT RACING</span></div><div class="card-body"><h3>Drive</h3><p>Roll out of the garage and race a six-car field across three circuits. Five laps to take the lead.</p><a class="button dark" href="drive.html"><svg class="icon"><use href="#wheel"/></svg>Enter the garage</a></div></article>
-<article class="mode-card" id="simulate"><div class="art"><img src="assets/tunnel.webp" alt="Airflow streamlines around a car inside a wind tunnel"><span class="image-label"><svg class="icon"><use href="#flow"/></svg> AERODYNAMICS</span></div><div class="card-body"><h3>Simulate</h3><p>Explore airflow around the demo car, or bring your own mesh into the wind tunnel.</p><div class="actions"><a class="button dark" href="wind-tunnel.html"><svg class="icon"><use href="#play"/></svg>Launch demo</a><a class="button outline" href="playground.html"><svg class="icon"><use href="#cube"/></svg>Open playground</a></div></div></article></div></section></main>
-<footer><div class="wrap"><a class="wordmark" href="./"><img src="brand.svg" width="33" alt="">Groundline</a><span>MOTORSPORT SIMULATION</span></div></footer>
-<svg xmlns="http://www.w3.org/2000/svg" class="symbols"><symbol id="wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="m3.5 9 6.5 2m10.5-2L14 11m-2 3v7"/></symbol><symbol id="flag" viewBox="0 0 24 24"><path d="M4 21V4c5-4 10 4 16 0v10c-6 4-11-4-16 0"/></symbol><symbol id="flow" viewBox="0 0 24 24"><path d="M2 6h7c4 0 4-3 8-3h5M2 12h7c4 0 4-2 8-2h5M2 18h7c4 0 4 3 8 3h5"/></symbol><symbol id="play" viewBox="0 0 24 24"><path d="m7 4 12 8-12 8z"/></symbol><symbol id="cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7zm-9 5 9 5 9-5m-9 5v10"/></symbol></svg></body></html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111c2a">
+  <meta name="description" content="Race three circuits or explore the aerodynamics of your own mesh in the Groundline wind tunnel.">
+  <title>Groundline · Aerodynamics</title>
+  <link rel="icon" href="brand.svg">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="home-page">
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="wordmark glass" href="./" aria-label="Groundline home"><img src="brand.svg" alt="">Groundline</a>
+      <nav class="glass" aria-label="Main navigation">
+        <a href="./" aria-current="page">Overview</a>
+        <a href="drive.html">Drive</a>
+        <a href="#simulate">Simulate</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap">
+    <section class="hero glass" aria-labelledby="hero-title">
+      <img class="hero-photo" src="assets/hero.webp" alt="Groundline’s lime and navy Formula 22 under wind tunnel lighting" fetchpriority="high">
+      <div class="hero-shade"></div>
+      <div class="hero-copy">
+        <h1 class="display" id="hero-title">Groundline <em>Aerodynamics</em></h1>
+        <p>Race the Formula 22 on three circuits, or explore the airflow around it in the wind tunnel.</p>
+        <a class="button primary" href="drive.html"><svg class="icon" aria-hidden="true"><use href="#wheel"/></svg>Enter the garage</a>
+      </div>
+    </section>
+    <section class="modes" aria-labelledby="modes-title">
+      <h2 class="display" id="modes-title">Choose your mode</h2>
+      <div class="cards">
+        <article class="mode-card glass" id="drive">
+          <div class="art"><img src="assets/drive.webp" alt="The Groundline open-wheel car cornering on track"></div>
+          <div class="card-body">
+            <h3 class="display"><svg class="icon" aria-hidden="true"><use href="#flag"/></svg>Drive</h3>
+            <p>Roll out of the garage and race a six-car field across three circuits. Five laps to take the lead.</p>
+            <div class="actions">
+              <a class="button secondary" href="drive.html">Enter the garage</a>
+            </div>
+          </div>
+        </article>
+        <article class="mode-card glass" id="simulate">
+          <div class="art"><img src="assets/tunnel.webp" alt="Airflow streamlines around a car inside a wind tunnel"></div>
+          <div class="card-body">
+            <h3 class="display"><svg class="icon" aria-hidden="true"><use href="#flow"/></svg>Simulate</h3>
+            <p>Explore airflow around the demo car, or bring your own mesh into the wind tunnel.</p>
+            <div class="actions">
+              <a class="button primary" href="wind-tunnel.html"><svg class="icon" aria-hidden="true"><use href="#play"/></svg>Launch demo</a>
+              <a class="button secondary" href="playground.html"><svg class="icon" aria-hidden="true"><use href="#cube"/></svg>Open playground</a>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+  </main>
+  <footer class="site-footer">
+    <div class="wrap">
+      <a class="wordmark" href="./" aria-label="Groundline home"><img src="brand.svg" alt="">Groundline</a>
+    </div>
+  </footer>
+  <svg xmlns="http://www.w3.org/2000/svg" class="symbols" aria-hidden="true">
+    <symbol id="wheel" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2"/><path d="m3.5 9 6.5 2m10.5-2L14 11m-2 3v7"/></symbol>
+    <symbol id="flag" viewBox="0 0 24 24"><path d="M4 21V4c5-4 10 4 16 0v10c-6 4-11-4-16 0"/></symbol>
+    <symbol id="flow" viewBox="0 0 24 24"><path d="M2 6h7c4 0 4-3 8-3h5M2 12h7c4 0 4-2 8-2h5M2 18h7c4 0 4 3 8 3h5"/></symbol>
+    <symbol id="play" viewBox="0 0 24 24"><path d="m7 4 12 8-12 8z"/></symbol>
+    <symbol id="cube" viewBox="0 0 24 24"><path d="m12 2 9 5v10l-9 5-9-5V7zm-9 5 9 5 9-5m-9 5v10"/></symbol>
+  </svg>
+</body>
+</html>

@@ -4,6 +4,13 @@ import {makeDriver,advance,aiControl,carContacts} from './dynamics.js';
 import {raceCar,numbers,loadRaceCar} from './models.js';
 import {buildWorld,disposeWorld} from './world.js';
 const $=id=>document.getElementById(id),tracks=circuits.map(makeCircuit),keys=new Set();
+const theme=getComputedStyle(document.documentElement);
+const mapColors={
+ selected:theme.getPropertyValue('--accent').trim(),
+ unselected:theme.getPropertyValue('--muted').trim(),
+ opponent:theme.getPropertyValue('--text').trim(),
+ start:theme.getPropertyValue('--amber').trim()
+};
 const lapCount=5,clockText=t=>{const ms=Math.floor(t*1000);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0')};
 let renderer,camera,world,track,cars=[],models=[],mode='garage',previous,elapsed=0,intro=0,gridTime=0,accumulator=0,prevStamp=0,hudTimer=0,closeCamera=false,active=0;
 let audio,osc,gain,filter,sound=false;
@@ -16,12 +23,12 @@ function updateAudio(){if(!audio)return;const c=cars[0],audible=sound&&mode!=='p
 function drawMap(canvas,t,list=[],selected=true){
  const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const b=t.bounds,scale=Math.min((w-18)/(b.maxX-b.minX),(h-18)/(b.maxZ-b.minZ)),point=(x,z)=>[(x-(b.minX+b.maxX)/2)*scale+w/2,h/2-(z-(b.minZ+b.maxZ)/2)*scale];
- ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=selected?'#b9f4e6':'#82969d';ctx.stroke();ctx.fillStyle='#ffd6a0';const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
- for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?'#e1e8dc':'#ffd6a0';ctx.fill()}
+ ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=list.length||!selected?mapColors.unselected:mapColors.selected;ctx.stroke();ctx.fillStyle=mapColors.start;const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
+ for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?mapColors.opponent:mapColors.selected;ctx.fill()}
 }
 for(const [i,t] of tracks.entries()){
  t.bounds={minX:Math.min(...t.nodes.map(p=>p.x)),maxX:Math.max(...t.nodes.map(p=>p.x)),minZ:Math.min(...t.nodes.map(p=>p.z)),maxZ:Math.max(...t.nodes.map(p=>p.z))};
- const button=document.createElement('button');button.className='track';button.innerHTML='<canvas width="120" height="80" aria-hidden="true"></canvas><span><b></b><small></small></span>';button.querySelector('b').textContent=t.def.name;button.querySelector('small').textContent=t.def.region+' · '+(t.length/1000).toFixed(2)+' km';button.onclick=()=>setup(i);$('tracks').append(button);drawMap(button.firstChild,t,[],i===0);
+ const button=document.createElement('button');button.className='track';button.disabled=true;button.innerHTML='<canvas width="120" height="80" aria-hidden="true"></canvas><span><b></b><small></small></span>';button.querySelector('b').textContent=t.def.name;button.querySelector('small').textContent=t.def.region+' · '+(t.length/1000).toFixed(2)+' km';button.onclick=()=>setup(i);$('tracks').append(button);drawMap(button.firstChild,t,[],i===0);
 }
 function resize(){const cv=$('world'),w=cv.clientWidth,h=cv.clientHeight;renderer.setSize(w,h,false);camera.aspect=w/h;if(mode==='garage'&&w>760)camera.setViewOffset(w,h,-w*.16,0,w,h);else camera.clearViewOffset();camera.updateProjectionMatrix()}
 function garagePoint(s,lane){
@@ -36,7 +43,7 @@ function setup(i){
  for(let id=1;id<6;id++)updateModel(cars[id],models[id],0,true);
  models[0].root.rotation.y=player.heading;
  document.querySelectorAll('.track').forEach((b,n)=>{b.setAttribute('aria-pressed',String(n===i));drawMap(b.firstChild,tracks[n],[],n===i)});
- $('garage').hidden=false;for(const id of ['racehud','banner','pause','pausePanel','result','touch'])$(id).hidden=true;$('circuitName').textContent=track.def.name.toUpperCase();
+ $('garage').hidden=false;for(const id of ['racehud','banner','pause','pausePanel','result','touch'])$(id).hidden=true;$('circuitName').textContent=track.def.name;
  resize();updateCamera(1,true);
 }
 function updateModel(c,m,dt,snap=false){
@@ -49,15 +56,15 @@ const desired=new T.Vector3(),target=new T.Vector3(),aim=new T.Vector3();
 function updateCamera(dt,snap=false){
  const c=cars[0],m=models[0].root,p=m.position,sn=Math.sin(c.heading),cs=Math.cos(c.heading);
  if(mode==='garage'){desired.set(p.x+sn*4.85+cs*3.38,p.y+1.95,p.z+cs*4.85-sn*3.38);target.set(p.x,p.y+.65,p.z)}
- else {const hood=closeCamera&&mode==='racing',dist=hood?-.54:mode==='intro'?5.2:6.4+c.speed*.018;
-   desired.set(p.x-sn*dist,p.y+(hood?1.58:mode==='intro'?2.22:2.72+c.speed*.007),p.z-cs*dist);target.set(p.x+sn*(hood?17:6.2),p.y+(hood?1.23:1.10),p.z+cs*(hood?17:6.2));
+ else {const hood=closeCamera&&mode==='racing',dist=hood?-.25:mode==='intro'?5.2:6.4+c.speed*.018;
+   desired.set(p.x-sn*dist,p.y+(hood?.9:mode==='intro'?2.22:2.72+c.speed*.007),p.z-cs*dist);target.set(p.x+sn*(hood?17:6.2),p.y+(hood?.81:1.10),p.z+cs*(hood?17:6.2));
    if(mode==='racing'||mode==='countdown'){desired.y-=c.surface.grade*dist;target.y+=c.surface.grade*(hood?17:6.2)}
  }
  const blend=snap?1:1-Math.exp(-dt*(closeCamera?25:7));camera.position.lerp(desired,blend);aim.lerp(target,snap?1:1-Math.exp(-dt*10));camera.lookAt(aim);const fov=mode==='garage'?48:59+c.speed*.10;if(Math.abs(camera.fov-fov)>.05){camera.fov=fov;camera.updateProjectionMatrix()}world.sky.position.copy(camera.position);
 }
 function banner(text){$('banner').textContent=text;$('banner').hidden=!text}
 function begin(){
- mode='intro';$('garage').hidden=true;$('pause').hidden=false;intro=0;world.door.scale.y=1;resize();updateCamera(1,true);banner('GARAGE EXIT');
+ mode='intro';$('garage').hidden=true;$('pause').hidden=false;intro=0;world.door.scale.y=1;resize();updateCamera(1,true);banner('Garage exit');
 }
 $('start').onclick=begin;
 function rollout(dt){
@@ -102,5 +109,5 @@ for(const b of document.querySelectorAll('[data-key]')){b.onpointerdown=e=>{e.pr
 function frame(stamp){const dt=prevStamp?Math.min(.12,(stamp-prevStamp)/1000):0;prevStamp=stamp;
  if(mode!=='paused'&&mode!=='finished'){accumulator+=dt;while(accumulator>=1/120){step(1/120);accumulator-=1/120}updateCamera(dt);hudTimer+=dt;if(hudTimer>.09&&!$('racehud').hidden){updateHud();hudTimer=0}}
  updateAudio();renderer.render(world.scene,camera)}
-try{renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));camera=new T.PerspectiveCamera(57,1,.08,2600);await loadRaceCar();setup(0);addEventListener('resize',resize);renderer.setAnimationLoop(frame)}
+try{renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));camera=new T.PerspectiveCamera(57,1,.08,2600);await loadRaceCar();setup(0);$('start').disabled=false;$('start').textContent='Start race';document.querySelectorAll('.track').forEach(button=>button.disabled=false);addEventListener('resize',resize);renderer.setAnimationLoop(frame)}
 catch(error){console.error(error);$('garage').hidden=true;$('raceError').hidden=false;$('raceError').textContent='The racing renderer could not start. Enable WebGL and hardware acceleration, then reload the garage.'}

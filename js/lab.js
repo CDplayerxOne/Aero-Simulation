@@ -19,18 +19,27 @@ function start(){
   const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=17;controls.enablePan=false;
   function resetView(){camera.position.set(4.8,2.5,7.8);controls.target.set(0,0,0);controls.update()}
   resetView();$('reset').onclick=resetView;
-  scene.add(new THREE.HemisphereLight(0xe7f8ff,0x677882,2.1));const sun=new THREE.DirectionalLight(0xffe4bd,3.3);sun.position.set(-4,6,2);scene.add(sun);
-  const grid=new THREE.GridHelper(16,64,0x526776,0x364d5a);grid.position.y=-2.2;scene.add(grid);
-  const mat=new THREE.MeshStandardMaterial({color:0xe9a65b,metalness:.45,roughness:.34,side:THREE.DoubleSide});
+  scene.add(new THREE.HemisphereLight(0xe7f8ff,0x51647d,2.1));const sun=new THREE.DirectionalLight(0xddeeff,3.3);sun.position.set(-4,6,2);scene.add(sun);
+  const grid=new THREE.GridHelper(16,64,0x58728c,0x3d556e);grid.position.y=-2.2;scene.add(grid);
+  const mat=new THREE.MeshStandardMaterial({color:0x8ba9b9,metalness:.45,roughness:.34,side:THREE.DoubleSide});
   const model=new THREE.Mesh(new THREE.BufferGeometry(),mat);scene.add(model);
   let solveWorker,readWorker,timer,running=true,phase=0,paths=[],statusText='',importError='';
   const line=new THREE.LineSegments(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({vertexColors:true,transparent:true,opacity:.45}));
-  const dots=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0x9ffff2,size:.036}));scene.add(line,dots);
+  const dots=new THREE.Points(new THREE.BufferGeometry(),new THREE.PointsMaterial({color:0xb9f4e6,size:.036}));scene.add(line,dots);
+  // Match the original wind tunnel's relative air speed colors.
+  const flowColors=[0x5363b8,0x4daacb,0x70e0cf,0xdfef93].map(hex=>new THREE.Color(hex));
+  const flowColor=new THREE.Color();
   function status(){ $('message').textContent=importError||statusText }
   function solve(){
     solveWorker?.terminate();solveWorker=new Worker(new URL('./flow-worker.js',import.meta.url));statusText='Computing flow field…';status();const geom=model.geometry.clone().rotateZ(model.rotation.z);
     solveWorker.onmessage=e=>{paths=e.data;const coords=[],colors=[];
-      for(const path of paths)for(let i=4;i<path.length;i+=4)for(const t of [i-4,i]){coords.push(path[t],path[t+1],path[t+2]);const s=Math.max(0,Math.min(1,(path[t+3]-.25)/1.25));colors.push(.08+.32*s,.42+.55*s,.9-.22*s)}
+      for(const path of paths)for(let i=4;i<path.length;i+=4)for(const t of [i-4,i]){
+        coords.push(path[t],path[t+1],path[t+2]);
+        const shade=THREE.MathUtils.clamp((path[t+3]-.25)/1.25,0,1)*(flowColors.length-1);
+        const stop=Math.min(Math.floor(shade),flowColors.length-2);
+        flowColor.lerpColors(flowColors[stop],flowColors[stop+1],shade-stop);
+        colors.push(flowColor.r,flowColor.g,flowColor.b);
+      }
       line.geometry.dispose();line.geometry=new THREE.BufferGeometry();line.geometry.setAttribute('position',new THREE.Float32BufferAttribute(coords,3));line.geometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));
       dots.geometry.dispose();dots.geometry=new THREE.BufferGeometry();dots.geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*paths.length*4),3));dots.frustumCulled=false;
       statusText='Flow field ready';status();solveWorker.terminate();solveWorker=null;
