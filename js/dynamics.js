@@ -45,8 +45,9 @@ export function advance(c,input,track,dt){
    const normalX=Math.sign(hit.offset)*hit.p.tz,normalZ=-Math.sign(hit.offset)*hit.p.tx;
    const forwardDot=sin*normalX+cos*normalZ,rightDot=cos*normalX-sin*normalZ;
    const outward=Math.max(0,c.speed*forwardDot+c.side*rightDot);
-   c.speed=Math.max(0,c.speed-outward*forwardDot)*Math.exp(-dt*.7);
-   c.side-=outward*rightDot;
+   const scrape=Math.exp(-dt*.7);
+   c.speed=Math.max(0,c.speed-outward*forwardDot)*scrape;
+   c.side=(c.side-outward*rightDot)*scrape;
    c.omega*=Math.exp(-dt*5);
    if(c.speed<3 && input.gas && Math.abs(c.steer)>.04)c.heading+=c.steer*dt*1.8;
  }
