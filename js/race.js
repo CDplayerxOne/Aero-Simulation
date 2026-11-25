@@ -4,6 +4,13 @@ import {makeDriver,advance,aiControl,carContacts} from './dynamics.js';
 import {raceCar,numbers} from './models.js';
 import {buildWorld,disposeWorld} from './world.js';
 const $=id=>document.getElementById(id),tracks=circuits.map(makeCircuit),keys=new Set();
+const theme=getComputedStyle(document.documentElement);
+const mapColors={
+ selected:theme.getPropertyValue('--accent').trim(),
+ unselected:theme.getPropertyValue('--muted').trim(),
+ opponent:theme.getPropertyValue('--text').trim(),
+ start:theme.getPropertyValue('--amber').trim()
+};
 const lapCount=5,clockText=t=>{const ms=Math.floor(t*1000);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0')};
 let renderer,camera,world,track,cars=[],models=[],mode='garage',previous,elapsed=0,intro=0,gridTime=0,accumulator=0,prevStamp=0,hudTimer=0,closeCamera=false,active=0;
 let audio,osc,gain,filter,sound=false;
@@ -16,8 +23,8 @@ function updateAudio(){if(!audio)return;const c=cars[0],audible=sound&&mode!=='p
 function drawMap(canvas,t,list=[],selected=true){
  const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const b=t.bounds,scale=Math.min((w-18)/(b.maxX-b.minX),(h-18)/(b.maxZ-b.minZ)),point=(x,z)=>[(x-(b.minX+b.maxX)/2)*scale+w/2,h/2-(z-(b.minZ+b.maxZ)/2)*scale];
- ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=selected?'#f5d1ad':'#82969d';ctx.stroke();ctx.fillStyle='#ef5b32';const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
- for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?'#e1e8dc':'#ff6437';ctx.fill()}
+ ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=list.length||!selected?mapColors.unselected:mapColors.selected;ctx.stroke();ctx.fillStyle=mapColors.start;const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
+ for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?mapColors.opponent:mapColors.selected;ctx.fill()}
 }
 for(const [i,t] of tracks.entries()){
  t.bounds={minX:Math.min(...t.nodes.map(p=>p.x)),maxX:Math.max(...t.nodes.map(p=>p.x)),minZ:Math.min(...t.nodes.map(p=>p.z)),maxZ:Math.max(...t.nodes.map(p=>p.z))};
@@ -36,7 +43,7 @@ function setup(i){
  for(let id=1;id<6;id++)updateModel(cars[id],models[id],0,true);
  models[0].root.rotation.y=player.heading;
  document.querySelectorAll('.track').forEach((b,n)=>{b.setAttribute('aria-pressed',String(n===i));drawMap(b.firstChild,tracks[n],[],n===i)});
- $('garage').hidden=false;for(const id of ['racehud','banner','pause','pausePanel','result','touch'])$(id).hidden=true;$('circuitName').textContent=track.def.name.toUpperCase();
+ $('garage').hidden=false;for(const id of ['racehud','banner','pause','pausePanel','result','touch'])$(id).hidden=true;$('circuitName').textContent=track.def.name;
  resize();updateCamera(1,true);
 }
 function updateModel(c,m,dt,snap=false){
@@ -57,7 +64,7 @@ function updateCamera(dt,snap=false){
 }
 function banner(text){$('banner').textContent=text;$('banner').hidden=!text}
 function begin(){
- mode='intro';$('garage').hidden=true;$('pause').hidden=false;intro=0;world.door.scale.y=1;resize();updateCamera(1,true);banner('GARAGE EXIT');
+ mode='intro';$('garage').hidden=true;$('pause').hidden=false;intro=0;world.door.scale.y=1;resize();updateCamera(1,true);banner('Garage exit');
 }
 $('start').onclick=begin;
 function rollout(dt){

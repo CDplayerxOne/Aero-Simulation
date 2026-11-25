@@ -1,9 +1,71 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="theme-color" content="#142733"><title>Mesh playground · Groundline</title><link rel="icon" href="brand.svg"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="lab.css"></head><body>
-<header class="site-header"><div class="wrap nav-inner"><a class="wordmark" href="./"><img src="brand.svg" width="43" alt="">GROUNDLINE</a><nav aria-label="Main navigation"><a href="./">Overview</a><a href="drive.html">Drive</a><a href="playground.html" class="current" aria-current="page">Simulate</a></nav></div></header>
-<main class="lab"><section class="lab-stage"><canvas id="labview" aria-label="Interactive three-dimensional wind tunnel. Drag to orbit and scroll to zoom." tabindex="0"></canvas><div class="lab-title"><div class="eyebrow hero-eyebrow"><span></span> AERODYNAMICS</div><h1 class="display">MESH PLAYGROUND</h1></div><div id="viewError" hidden></div><div class="stage-bottom"><span id="meshName">Reference airfoil</span><span>Drag to orbit · Scroll to zoom</span></div></section>
-<aside class="lab-panel"><div class="eyebrow section-eyebrow"><span></span> TEST SETUP</div><h2>Wind tunnel</h2><p>Load a mesh to see how its shape changes the surrounding airflow.</p>
-<label class="drop" id="drop"><b>Upload a mesh</b><span>Choose a file or drop it here</span><small>OBJ or STL · up to 20 MB</small><input id="file" type="file" accept=".obj,.stl"></label><p id="message" role="status"></p>
-<div class="slider"><label for="speed">Air speed</label><output id="speedValue">35 m/s</output><input id="speed" type="range" min="5" max="80" value="35"></div>
-<div class="slider"><label for="angle">Angle of attack</label><output id="angleValue">4°</output><input id="angle" type="range" min="-25" max="25" value="4"></div>
-<label class="check"><input id="traces" type="checkbox" checked> Show streamlines</label><label class="check"><input id="wire" type="checkbox"> Show wireframe</label><div class="lab-buttons"><button class="button dark" id="pause">Pause flow</button><button class="button outline" id="reset">Reset view</button></div>
-<div class="lab-data"><div><small>TRIANGLES</small><b id="triCount">—</b></div><div><small>DYNAMIC PRESSURE</small><b id="pressure">750 Pa</b></div></div><p class="method">Meshes are fitted to the test section. The voxel potential-flow model approximates steady, incompressible airflow. Viscous drag and turbulence are outside its scope.</p><a class="demo-link" href="wind-tunnel.html">Open the original car demo</a></aside></main><script type="module" src="js/lab.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111c2a">
+  <title>Mesh playground · Groundline</title>
+  <link rel="icon" href="brand.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="lab.css">
+</head>
+<body class="lab-page">
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="wordmark glass" href="./" aria-label="Groundline home"><img src="brand.svg" alt="">Groundline</a>
+      <nav class="glass" aria-label="Main navigation">
+        <a href="./">Overview</a>
+        <a href="drive.html">Drive</a>
+        <a href="playground.html" aria-current="page">Simulate</a>
+      </nav>
+    </div>
+  </header>
+  <main class="lab wrap" aria-labelledby="lab-heading">
+    <section class="lab-stage">
+      <canvas id="labview" aria-label="Interactive three-dimensional wind tunnel. Drag to orbit and scroll to zoom." tabindex="0"></canvas>
+      <div class="lab-title glass"><h1 id="lab-heading" class="display">Mesh playground</h1></div>
+      <div id="viewError" class="glass" role="alert" hidden></div>
+      <div class="stage-bottom">
+        <span class="glass" id="meshName">Reference airfoil</span>
+        <span class="stage-hint">Drag to orbit · Scroll to zoom</span>
+      </div>
+    </section>
+    <aside class="lab-panel glass" aria-labelledby="tunnel-heading">
+      <h2 class="display" id="tunnel-heading">Wind tunnel</h2>
+      <p class="lab-intro">Load a mesh to see how its shape changes the surrounding airflow.</p>
+      <label class="drop" id="drop">
+        <b>Upload a mesh</b>
+        <span>Choose a file or drop it here</span>
+        <small>OBJ or STL · up to 20 MB</small>
+        <input id="file" type="file" accept=".obj,.stl" aria-label="Upload an OBJ or STL mesh">
+      </label>
+      <p id="message" role="status"></p>
+      <div class="lab-controls">
+        <div class="slider">
+          <label for="speed">Air speed</label>
+          <output id="speedValue" for="speed">35 m/s</output>
+          <input id="speed" type="range" min="5" max="80" value="35">
+        </div>
+        <div class="slider">
+          <label for="angle">Angle of attack</label>
+          <output id="angleValue" for="angle">4°</output>
+          <input id="angle" type="range" min="-25" max="25" value="4">
+        </div>
+        <label class="check">Show streamlines <input id="traces" type="checkbox" role="switch" checked></label>
+        <label class="check">Show wireframe <input id="wire" type="checkbox" role="switch"></label>
+        <div class="lab-buttons">
+          <button class="button primary" id="pause">Pause flow</button>
+          <button class="button secondary" id="reset">Reset view</button>
+        </div>
+      </div>
+      <dl class="lab-data">
+        <div><dt>Triangles</dt><dd id="triCount">—</dd></div>
+        <div><dt>Dynamic pressure</dt><dd id="pressure">750 Pa</dd></div>
+      </dl>
+      <p class="method">Meshes are fitted to the test section. The voxel potential-flow model approximates steady, incompressible airflow. Viscous drag and turbulence are outside its scope.</p>
+      <a class="demo-link" href="wind-tunnel.html">Open the original car demo</a>
+    </aside>
+  </main>
+  <script type="module" src="js/lab.js"></script>
+</body>
+</html>

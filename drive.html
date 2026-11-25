@@ -1,8 +1,82 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#11232e"><title>Race garage · Groundline</title><link rel="icon" href="brand.svg"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="race.css"></head><body class="race-page">
-<main class="race-screen"><canvas id="world" aria-label="Three-dimensional racing circuit"></canvas><div class="race-top"><a class="wordmark" aria-label="Groundline home" href="./"><img src="brand.svg" width="37" alt="">GROUNDLINE</a><div class="top-actions"><button id="sound" aria-pressed="false">Sound off</button><button id="pause" hidden>Pause</button></div></div>
-<section id="garage" class="garage panel"><div class="eyebrow hero-eyebrow"><span></span> CIRCUIT RACING</div><h1 class="display">RACE GARAGE<span>.</span></h1><p>Choose your circuit and roll out in the Groundline GT.</p><div id="tracks" role="group" aria-label="Choose a circuit"></div><div class="race-format"><span><b>05</b> LAPS</span><span><b>06</b> CARS</span><span><b>GT</b> CLASS</span></div><button id="start" class="button primary">Start race</button><div class="keys"><span><kbd>W</kbd> / <kbd>↑</kbd> Throttle</span><span><kbd>S</kbd> / <kbd>↓</kbd> Brake</span><span><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd> Steer</span></div></section>
-<div id="racehud" hidden><div class="position"><div><small>POSITION</small><strong id="pos">6<em>/ 6</em></strong></div><div><small>LAP</small><strong id="lap">1<em>/ 5</em></strong></div></div><div class="timing"><small id="circuitName"></small><b id="time">0:00.000</b><span id="best">Best lap —</span></div><div class="map-box"><canvas id="map" width="210" height="160" aria-label="Circuit map and car positions"></canvas></div><div class="speedometer"><div><small>GEAR</small><b id="gear">1</b></div><div><strong id="velocity">000</strong><small>KM/H</small></div><i id="rev"></i></div></div>
-<div id="banner" aria-live="polite" hidden></div>
-<div id="touch" hidden><div><button data-key="ArrowLeft" aria-label="Steer left">◀</button><button data-key="ArrowRight" aria-label="Steer right">▶</button></div><div><button data-key="ArrowDown">Brake</button><button data-key="ArrowUp" class="gas">Gas</button></div></div>
-<section id="pausePanel" class="dialog panel" hidden><div class="eyebrow hero-eyebrow"><span></span> RACE CONTROL</div><h2 class="display">PAUSED</h2><p>WASD or arrow keys to drive. Press R to recover your car and C to switch camera.</p><button id="resume" class="button primary">Resume race</button><button id="recover" class="button pale">Recover car</button><button class="button pale return">Return to garage</button></section>
-<section id="result" class="dialog panel" hidden><div class="eyebrow hero-eyebrow"><span></span> CHEQUERED FLAG</div><h2 class="display">RACE COMPLETE</h2><p id="resultText"></p><ol id="standings"></ol><button class="button primary return">Return to garage</button></section><div id="raceError" class="dialog panel" role="alert" hidden></div></main><script type="module" src="js/race.js"></script></body></html>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#111c2a">
+  <title>Race garage · Groundline</title>
+  <link rel="icon" href="brand.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="race.css">
+</head>
+<body class="race-page">
+  <main class="race-screen">
+    <canvas id="world" aria-label="Three-dimensional racing circuit"></canvas>
+    <header class="race-top">
+      <a class="wordmark glass" aria-label="Groundline home" href="./"><img src="brand.svg" alt="">Groundline</a>
+      <div class="top-actions glass">
+        <button id="sound" aria-pressed="false">Sound off</button>
+        <button id="pause" hidden>Pause</button>
+      </div>
+    </header>
+
+    <section id="garage" class="garage glass" aria-labelledby="garage-heading">
+      <h1 class="display" id="garage-heading">Race garage</h1>
+      <p>Choose your circuit and roll out in the Groundline GT.</p>
+      <div id="tracks" role="group" aria-label="Choose a circuit"></div>
+      <dl class="race-format">
+        <div><dt>Laps</dt><dd>5</dd></div>
+        <div><dt>Cars</dt><dd>6</dd></div>
+        <div><dt>Class</dt><dd>GT</dd></div>
+      </dl>
+      <button id="start" class="button primary">Start race</button>
+      <div class="keys">
+        <span><kbd>W</kbd> / <kbd>↑</kbd> Throttle</span>
+        <span><kbd>S</kbd> / <kbd>↓</kbd> Brake</span>
+        <span><kbd>A</kbd> <kbd>D</kbd> / <kbd>←</kbd> <kbd>→</kbd> Steer</span>
+      </div>
+    </section>
+
+    <div id="racehud" hidden>
+      <div class="position glass">
+        <div><small>Position</small><strong id="pos">6<em>/ 6</em></strong></div>
+        <div><small>Lap</small><strong id="lap">1<em>/ 5</em></strong></div>
+      </div>
+      <div class="timing glass"><small id="circuitName"></small><b id="time">0:00.000</b><span id="best">Best lap —</span></div>
+      <div class="map-box glass"><canvas id="map" width="210" height="160" aria-label="Circuit map and car positions"></canvas></div>
+      <div class="speedometer glass">
+        <div><small>Gear</small><b id="gear">1</b></div>
+        <div><strong id="velocity">000</strong><small>km/h</small></div>
+        <i id="rev"></i>
+      </div>
+    </div>
+    <div id="banner" class="glass" aria-live="polite" hidden></div>
+    <div id="touch" hidden>
+      <div>
+        <button class="button glass" data-key="ArrowLeft" aria-label="Steer left">◀</button>
+        <button class="button glass" data-key="ArrowRight" aria-label="Steer right">▶</button>
+      </div>
+      <div>
+        <button class="button glass" data-key="ArrowDown">Brake</button>
+        <button class="button primary" data-key="ArrowUp">Gas</button>
+      </div>
+    </div>
+
+    <section id="pausePanel" class="dialog glass" aria-labelledby="pause-heading" hidden>
+      <h2 class="display" id="pause-heading">Paused</h2>
+      <p>WASD or arrow keys to drive. Press R to recover your car and C to switch camera.</p>
+      <button id="resume" class="button primary">Resume race</button>
+      <button id="recover" class="button secondary">Recover car</button>
+      <button class="button secondary return">Return to garage</button>
+    </section>
+    <section id="result" class="dialog glass" aria-labelledby="result-heading" hidden>
+      <h2 class="display" id="result-heading">Race complete</h2>
+      <p id="resultText"></p>
+      <ol id="standings"></ol>
+      <button class="button primary return">Return to garage</button>
+    </section>
+    <div id="raceError" class="dialog glass" role="alert" hidden></div>
+  </main>
+  <script type="module" src="js/race.js"></script>
+</body>
+</html>
