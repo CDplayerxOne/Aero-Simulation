@@ -11,7 +11,11 @@ function exhaustWave(context,bank){
       imag[harmonic]+=strength[cylinder]*envelope*Math.sin(phase);
     }
   }
-  return context.createPeriodicWave(real,imag);
+  // Bound each bank before filtering so their summed exhaust has mixing headroom.
+  let amplitude=0;
+  for(let h=1;h<real.length;h++)amplitude+=Math.hypot(real[h],imag[h]);
+  for(let h=1;h<real.length;h++){real[h]/=amplitude;imag[h]/=amplitude}
+  return context.createPeriodicWave(real,imag,{disableNormalization:true});
 }
 
 export function createRaceAudio(context){
