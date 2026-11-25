@@ -60,7 +60,7 @@ function updateCamera(dt,snap=false){
    desired.set(p.x-sn*dist,p.y+(hood?.9:mode==='intro'?2.22:2.72+c.speed*.007),p.z-cs*dist);target.set(p.x+sn*(hood?17:6.2),p.y+(hood?.81:1.10),p.z+cs*(hood?17:6.2));
    if(mode==='racing'||mode==='countdown'){desired.y-=c.surface.grade*dist;target.y+=c.surface.grade*(hood?17:6.2)}
  }
- const blend=snap?1:1-Math.exp(-dt*(closeCamera?25:7));camera.position.lerp(desired,blend);aim.lerp(target,snap?1:1-Math.exp(-dt*10));camera.lookAt(aim);const fov=mode==='garage'?48:59+c.speed*.10;if(Math.abs(camera.fov-fov)>.05){camera.fov=fov;camera.updateProjectionMatrix()}world.sky.position.copy(camera.position);
+ const mounted=snap||(closeCamera&&mode==='racing');const blend=mounted?1:1-Math.exp(-dt*7);camera.position.lerp(desired,blend);aim.lerp(target,mounted?1:1-Math.exp(-dt*10));camera.lookAt(aim);const fov=mode==='garage'?48:59+c.speed*.10;if(Math.abs(camera.fov-fov)>.05){camera.fov=fov;camera.updateProjectionMatrix()}world.sky.position.copy(camera.position);
 }
 function banner(text){$('banner').textContent=text;$('banner').hidden=!text}
 function begin(){
@@ -99,7 +99,7 @@ function updateHud(){const c=cars[0];$('pos').innerHTML=(ranking().indexOf(c)+1)
  $('time').textContent=clockText(c.finished?c.lastLap:elapsed-c.lapStart);$('best').textContent='Best lap '+(Number.isFinite(c.best)?clockText(c.best):'—');$('velocity').textContent=String(Math.round(c.speed*3.6)).padStart(3,'0');$('gear').textContent=c.gear+1;$('rev').style.width=100*c.rpm/12500+'%';drawMap($('map'),track,cars)}
 function pause(){if(!['racing','intro','countdown'].includes(mode))return;previous=mode;mode='paused';keys.clear();$('pausePanel').hidden=false;$('pause').hidden=true;$('touch').hidden=true;$('recover').hidden=previous!=='racing';updateAudio()}
 function resume(){if(mode!=='paused')return;mode=previous;$('pausePanel').hidden=true;$('pause').hidden=false;$('touch').hidden=mode!=='racing';prevStamp=0}
-function recover(){const c=cars[0],fresh=makeDriver(track,c.progress,0,0);Object.assign(c,{x:fresh.x,z:fresh.z,heading:fresh.heading,speed:0,side:0,omega:0,steer:0,index:fresh.index,surface:fresh.surface,offset:0,acc:0,latAcc:0,gear:0});updateModel(c,models[0],0,true);updateCamera(1,true)}
+function recover(){const c=cars[0],fresh=makeDriver(track,c.progress,0,0);Object.assign(c,{x:fresh.x,z:fresh.z,heading:fresh.heading,speed:0,side:0,omega:0,steer:0,index:fresh.index,surface:fresh.surface,offset:0,acc:0,latAcc:0,gear:0,handbrake:0});updateModel(c,models[0],0,true);updateCamera(1,true)}
 $('pause').onclick=pause;$('resume').onclick=resume;$('recover').onclick=()=>{resume();recover()};document.querySelectorAll('.return').forEach(b=>b.onclick=()=>setup(active));
 const driveKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD'];
 addEventListener('keydown',e=>{if(e.code==='Escape'){if(mode==='paused')resume();else pause();return}
