@@ -20,7 +20,7 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Serving over HTTP lets the 
 
 ## Drive
 
-Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or Northwood Park. Each race runs for five laps against five computer-controlled opponents. The Formula 22 shifts automatically through eight gears.
+Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or Northwood Park. Each race runs for five laps against five computer-controlled opponents. The Formula 22 shifts automatically through eight gears. Turn on **Sound** to hear the garage music and workshop ambience. The music fades as the garage door opens.
 
 | Action | Keyboard |
 | --- | --- |
@@ -37,7 +37,7 @@ Touch devices get on-screen steering, throttle, brake, and drift controls. Open 
 ## Explore airflow
 
 - **[Wind tunnel demo](wind-tunnel.html)** — Adjust air speed, yaw, and rear wing incidence. Inspect streamlines, estimated surface pressure, and undertray tracers. The telemetry panel shows Reynolds number, lift and drag coefficients, and estimates of drag and downforce. Turn on the **Aerodynamics guide** to explore parts of the car.
-- **[Mesh playground](playground.html)** — Start with the reference airfoil or import an OBJ or STL file up to 20 MB and 350,000 triangles. Adjust air speed and angle of attack and inspect streamlines or the mesh wireframe. The browser reads and processes your file locally.
+- **[Mesh playground](playground.html)** — Start with the reference airfoil or import an OBJ or STL file up to 20 MB and 350,000 triangles. Adjust air speed and angle of attack and inspect streamlines, the surface pressure heatmap, or the mesh wireframe. The browser reads and processes your file locally.
 
 Both wind tunnels use simplified potential-flow models for qualitative comparisons. The demo's load estimates are illustrative, and the models do not resolve boundary layers or transient turbulence.
 
