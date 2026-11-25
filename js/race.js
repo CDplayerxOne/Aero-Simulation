@@ -1,6 +1,7 @@
 import * as T from '../vendor/three.module.min.js';
 import {circuits,makeCircuit,clamp,mod} from './circuits.js';
 import {makeDriver,advance,aiControl,carContacts} from './dynamics.js';
+import {createRaceAudio} from './race-audio.js';
 import {raceCar,numbers,loadRaceCar} from './models.js';
 import {buildWorld,disposeWorld} from './world.js';
 const $=id=>document.getElementById(id),tracks=circuits.map(makeCircuit),keys=new Set();
@@ -13,13 +14,26 @@ const mapColors={
 };
 const lapCount=5,clockText=t=>{const ms=Math.floor(t*1000);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0')};
 let renderer,camera,world,track,cars=[],models=[],mode='garage',previous,elapsed=0,intro=0,gridTime=0,accumulator=0,prevStamp=0,hudTimer=0,closeCamera=false,active=0;
-let audio,osc,gain,filter,sound=false;
-function audioToggle(){try{
- if(!audio){audio=new AudioContext();osc=audio.createOscillator();gain=audio.createGain();filter=audio.createBiquadFilter();osc.type='sawtooth';filter.type='lowpass';filter.frequency.value=240;osc.connect(filter);filter.connect(gain);gain.connect(audio.destination);gain.gain.value=0;osc.start()}
- audio.resume();sound=!sound;$('sound').textContent=sound?'Sound on':'Sound off';$('sound').setAttribute('aria-pressed',String(sound));
- }catch{$('sound').textContent='Audio unavailable';$('sound').disabled=true}}
+let audio,mixer,sound=false;
+async function audioToggle(){
+ const button=$('sound');
+ button.disabled=true;
+ try{
+   if(!audio){audio=new AudioContext();mixer=createRaceAudio(audio)}
+   if(!sound)await audio.resume();
+   sound=!sound;
+   button.textContent=sound?'Sound on':'Sound off';
+   button.setAttribute('aria-pressed',String(sound));
+   updateAudio();
+   button.disabled=false;
+ }catch{
+   sound=false;button.textContent='Audio unavailable';button.setAttribute('aria-pressed','false');
+ }
+}
 $('sound').onclick=audioToggle;
-function updateAudio(){if(!audio)return;const c=cars[0],audible=sound&&mode!=='paused'&&!document.hidden;gain.gain.setTargetAtTime(audible?.022+c.throttle*.035:0,audio.currentTime,.06);osc.frequency.setTargetAtTime(c.rpm/60*2,audio.currentTime,.04);filter.frequency.setTargetAtTime(220+c.rpm*.14,audio.currentTime,.10)}
+function updateAudio(){
+ mixer?.update(cars[0],sound && !!cars[0] && mode!=='paused' && !document.hidden);
+}
 function drawMap(canvas,t,list=[],selected=true){
  const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const b=t.bounds,scale=Math.min((w-18)/(b.maxX-b.minX),(h-18)/(b.maxZ-b.minZ)),point=(x,z)=>[(x-(b.minX+b.maxX)/2)*scale+w/2,h/2-(z-(b.minZ+b.maxZ)/2)*scale];
