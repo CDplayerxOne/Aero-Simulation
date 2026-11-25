@@ -20,7 +20,7 @@ Open [http://127.0.0.1:3000](http://127.0.0.1:3000). Serving over HTTP lets the 
 
 ## Drive
 
-Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or Northwood Park. Each race runs for five laps against five computer-controlled opponents. The Formula 22 shifts automatically through eight gears. Turn on **Sound** to hear the garage music and workshop ambience. The music fades as the garage door opens.
+Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or Northwood Park. Each race runs for five laps against five computer-controlled opponents. The Formula 22 shifts automatically through eight gears. Turn on **Sound** to hear the 144 BPM garage track with live-kit drum sounds, electric bass, strings, and brass. The music fades as the garage door opens.
 
 | Action | Keyboard |
 | --- | --- |

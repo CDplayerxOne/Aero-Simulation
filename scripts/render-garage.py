@@ -1,95 +1,124 @@
-"""Render the original Groundline garage loop. Requires NumPy, SciPy and ffmpeg."""
+"""Render the garage score with pyFluidSynth, TimGM6mb, NumPy and ffmpeg."""
+import argparse
 from pathlib import Path
 import subprocess
 
+import fluidsynth
 import numpy as np
-from scipy.signal import butter, sosfilt
 
-RATE = 32000
-BEAT = 60 / 92
-LENGTH = round(16 * 4 * BEAT * RATE)
-mix = np.zeros((LENGTH, 2))
-rng = np.random.default_rng(22)
+RATE = 44100
+BPM = 144
+BARS = 24
+FRAMES = round(BARS * 4 * 60 / BPM * RATE)
+BASS, GUITAR, STRINGS, HORNS, DRUMS = 0, 1, 2, 3, 9
 
-
-def time(seconds):
-    return np.arange(round(seconds * RATE)) / RATE
-
-
-def put(signal, beat, pan=0):
-    """Wrap release tails across the loop boundary."""
-    start = round(beat * BEAT * RATE) % LENGTH
-    stereo = signal[:, None] * np.sqrt([(1-pan)/2, (1+pan)/2])
-    first = min(len(signal), LENGTH-start)
-    mix[start:start+first] += stereo[:first]
-    mix[:len(signal)-first] += stereo[first:]
+# Two-bar call and response. Pitches are transposed with each harmony.
+CALL = [(0, 7, .68), (.75, 10, .19), (1, 12, .85), (2.5, 7, .38), (3.25, 5, .58)]
+ANSWER = [(0, 3, .38), (.5, 5, .36), (1.25, 7, 1.1), (2.75, 5, .39), (3.5, 3, .32)]
 
 
-def phase(note, t):
-    return 2 * np.pi * 440 * 2**((note-69)/12) * t
+def score():
+    events = []
+    rng = np.random.default_rng(22)
+
+    def note(channel, beat, key, duration, velocity):
+        frame = round(beat * 60 / BPM * RATE)
+        end = round((beat + duration) * 60 / BPM * RATE)
+        events.append((frame, channel, key, velocity))
+        events.append((end, channel, key, 0))
+
+    # D minor, B flat, F and C. Bring the rhythm section forward for the
+    # four-bar breakdown, then answer the opening riff in a higher register.
+    roots = [38, 34, 41, 36]
+    for bar in range(BARS):
+        at = bar * 4
+        harmony = (bar // 2) % 4
+        root = roots[harmony]
+        third = 3 if harmony == 0 else 4
+        breakdown = 16 <= bar < 20
+        lift = 8 <= bar < 16 or bar >= 20
+
+        kicks = [0, 2] if breakdown else [0, 1.5, 2.75] if bar % 2 else [0, .75, 2, 3.5]
+        for step in kicks:
+            note(DRUMS, at + step, 36, .16, 119 if step in (0, 2) else 100)
+        for step in ([2] if breakdown else [1, 3]):
+            note(DRUMS, at + step + .011, 38, .19, 117)
+        if bar % 2 and not breakdown:
+            note(DRUMS, at + 2.75, 38, .10, 49)
+        for eighth in range(8):
+            if breakdown and eighth % 2:
+                continue
+            note(DRUMS, at + eighth / 2 + .009 * (eighth % 2),
+                 46 if lift and eighth == 7 else 42, .18,
+                 (81 if eighth % 2 == 0 else 62) + int(rng.integers(-4, 5)))
+        if bar in (0, 8, 20):
+            note(DRUMS, at, 49, .75, 96)
+        if bar % 4 == 3:
+            for i, drum in enumerate([48, 47, 45, 41]):
+                note(DRUMS, at + 3 + i / 4, drum, .20, 88 + 7 * i)
+
+        bass = [(0, 0, .68), (.75, 0, .20), (1.5, 12, .39),
+                (2, 0, .32), (2.5, 7, .34), (3.25, 0, .22), (3.5, 7, .37)]
+        for step, interval, length in bass:
+            note(BASS, at + step, root + interval, length, 114 if step == 0 else 98)
+
+        for step in ([.5, 2.5] if breakdown else [.5, 1.25, 2.5, 3.25]):
+            for string, interval in enumerate([0, 7, 12]):
+                note(GUITAR, at + step + .014 * string, root + 12 + interval, .23, 90 - 3 * string)
+
+        if not breakdown:
+            for step, interval, length in (CALL if bar % 2 == 0 else ANSWER):
+                # Keep the hook diatonic over major chords.
+                semitones = {3: third, 10: 10 if harmony in (0, 3) else 11}.get(interval, interval)
+                note(STRINGS, at + step, root + 24 + semitones, length, 107)
+            if lift:
+                for step, length in [(0, .64), (1.75, .34), (3, .50)]:
+                    for voice, interval in enumerate([0, third, 7]):
+                        note(HORNS, at + step + .006 * voice, root + 24 + interval, length, 94 - voice * 3)
+        else:
+            for interval in [0, third, 7]:
+                note(STRINGS, at, root + 24 + interval, 2.65, 78)
+    return sorted(events)
 
 
-def noise(t, low, high):
-    band = butter(2, [low, high], fs=RATE, btype="bandpass", output="sos")
-    return sosfilt(band, rng.normal(size=t.size))
+def render(soundfont):
+    synth = fluidsynth.Synth(gain=.55, samplerate=RATE)
+    try:
+        bank = synth.sfload(str(soundfont))
+        if bank < 0:
+            raise RuntimeError(f"Cannot load {soundfont}")
+        for channel, program, volume, pan in [(BASS, 33, 111, 64), (GUITAR, 28, 94, 39),
+                                              (STRINGS, 48, 92, 77), (HORNS, 61, 84, 54),
+                                              (DRUMS, 0, 115, 64)]:
+            synth.program_select(channel, bank, 128 if channel == DRUMS else 0, program)
+            synth.cc(channel, 7, volume)
+            synth.cc(channel, 10, pan)
+            synth.cc(channel, 91, 20 if channel in (BASS, DRUMS) else 38)
+        events = score()
+        # Warm up once so the final loop opens with the preceding room tails.
+        for _ in range(2):
+            blocks = []
+            cursor = 0
+            for frame, channel, key, velocity in events:
+                if frame > cursor:
+                    blocks.append(synth.get_samples(frame - cursor))
+                    cursor = frame
+                if velocity:
+                    synth.noteon(channel, key, velocity)
+                else:
+                    synth.noteoff(channel, key)
+            blocks.append(synth.get_samples(FRAMES - cursor))
+        pcm = np.concatenate(blocks).astype(np.float32) / 32768
+        return .85 * pcm / max(.001, np.max(np.abs(pcm)))
+    finally:
+        synth.delete()
 
 
-# D minor ninth, B-flat major seventh, F major ninth and C suspended.
-chords = [(38, [53,57,60,64]), (34, [53,57,62,65]),
-          (41, [52,55,57,60]), (36, [50,53,55,62])]
-for bar in range(16):
-    root, chord = chords[(bar//2) % 4]
-    at = 4 * bar
-    pad = time(4.5 * BEAT)
-    for voice, note in enumerate(chord):
-        angle = phase(note, pad)
-        envelope = np.minimum(1, pad/.19) * np.minimum(1, (pad[-1]-pad)/.48)
-        tone = .7*np.sin(angle) + .22*np.sin(1.002*angle) + .08*np.sin(2*angle)
-        put(.059*tone*envelope, at, (voice-1.5)*.36)
-
-    for step, note in [(0,root), (1.75,root+12), (2.5,root+7)]:
-        t = time(.82)
-        angle = phase(note,t)
-        bass = (np.sin(angle)+.2*np.sin(2*angle)) * (1-np.exp(-t*80))*np.exp(-t*7)
-        put(.32*bass, at+step)
-
-    # Bell-like keys with a quiet, panned return.
-    for index, step in enumerate((.5,1.5,3.25) if bar%2 else (.75,2.25)):
-        note = chord[(bar+2*index)%4]+(12 if bar%4==3 else 0)
-        t = time(1.1)
-        angle = phase(note,t)
-        key = np.sin(angle+.88*np.exp(-t*10)*np.sin(2*angle))
-        key *= .145*(1-np.exp(-t*150))*np.exp(-t*4.7)
-        put(key,at+step,-.24)
-        put(.24*key,at+step+.375,.58)
-
-    for step in (0,2.5):
-        t = time(.30)
-        kick = np.sin(2*np.pi*(48*t+2*(1-np.exp(-t*38))))
-        put(.33*kick*np.exp(-t*17)*(1-np.exp(-t*300)),at+step)
-    for step in (1,3):
-        t = time(.16)
-        rim = np.sin(2*np.pi*385*t)*np.exp(-t*76) + .48*noise(t,850,3600)*np.exp(-t*33)
-        put(.12*rim*(1-np.exp(-t*500)),at+step,.16)
-    for eighth in range(8):
-        t = time(.08)
-        hat = noise(t,4900,10500)*np.exp(-t*72)
-        put((.048 if eighth%2 else .027)*hat,at+eighth*.5+.026*(eighth%2),-.32)
-
-# A pneumatic tool spins up and releases, with quieter metal ticks across the bay.
-for beat in (7.2, 32.8, 52.1):
-    t = time(.68)
-    speed = 1-np.exp(-t*19)
-    motor = np.sin(2*np.pi*(118*t-3.7*speed))
-    burst = (.15+.85*np.maximum(motor,0)**3)*noise(t,780,5100)
-    put(.24*burst*speed*np.minimum(1,(t[-1]-t)/.13),beat,.62)
-    for delay in (1.07,1.36):
-        t = time(.20)
-        click = np.sin(2*np.pi*1127*t)+.52*np.sin(2*np.pi*1783*t)
-        put(.055*click*np.exp(-t*58),beat+delay,-.56)
-
-mix = .82 * mix / np.max(np.abs(mix))
-target = Path(__file__).resolve().parents[1] / 'assets' / 'garage.mp3'
-subprocess.run(['ffmpeg','-loglevel','error','-y','-f','f32le','-ar',str(RATE),
-                '-ac','2','-i','pipe:0','-codec:a','libmp3lame','-q:a','4',str(target)],
-               input=mix.astype('<f4').tobytes(),check=True)
+if __name__ == '__main__':
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--soundfont', type=Path, default=Path('/usr/share/sounds/sf2/TimGM6mb.sf2'))
+    args = parser.parse_args()
+    target = Path(__file__).resolve().parents[1] / 'assets' / 'garage.mp3'
+    subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-f', 'f32le', '-ar', str(RATE),
+                    '-ac', '2', '-i', 'pipe:0', '-codec:a', 'libmp3lame', '-q:a', '3', str(target)],
+                   input=render(args.soundfont).astype('<f4').tobytes(), check=True)
