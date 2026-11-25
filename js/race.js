@@ -1,7 +1,7 @@
 import * as T from '../vendor/three.module.min.js';
 import {circuits,makeCircuit,clamp,mod} from './circuits.js';
 import {makeDriver,advance,aiControl,carContacts} from './dynamics.js';
-import {raceCar,numbers} from './models.js';
+import {raceCar,numbers,loadRaceCar} from './models.js';
 import {buildWorld,disposeWorld} from './world.js';
 const $=id=>document.getElementById(id),tracks=circuits.map(makeCircuit),keys=new Set();
 const lapCount=5,clockText=t=>{const ms=Math.floor(t*1000);return Math.floor(ms/60000)+':'+String(Math.floor(ms/1000)%60).padStart(2,'0')+'.'+String(ms%1000).padStart(3,'0')};
@@ -66,14 +66,14 @@ function rollout(dt){
  const blend=clamp((u-.31)/.69,0,1),lane=-21+18.85*blend*blend*(3-2*blend);
  const start=world.pit.position,base=garagePoint(s,lane),offset=garagePoint(-53,-21),p=base.clone().addScaledVector(new T.Vector3(start.x-offset.x,0,start.z-offset.z),1-u);
  const c=cars[0],dx=p.x-c.x,dz=p.z-c.z;if(Math.hypot(dx,dz)>.0002)c.heading=Math.atan2(dx,dz);
- c.x=p.x;c.z=p.z;c.speed=Math.hypot(dx,dz)/dt;c.rpm=1000+190*c.speed;c.wheel+=c.speed*dt/.33;
+ c.x=p.x;c.z=p.z;c.speed=Math.hypot(dx,dz)/dt;c.rpm=1000+190*c.speed;c.wheel+=c.speed*dt/.365;
  models[0].root.position.copy(p);models[0].root.rotation.y=c.heading;for(const w of models[0].wheels)w.wheel.rotation.x=c.wheel;
  if(intro>2.2)banner('');if(u>=1){cars[0]=makeDriver(track,0,-2.15,0);updateModel(cars[0],models[0],dt,true);mode='countdown';gridTime=0;$('racehud').hidden=false;banner('3');updateHud()}
 }
 function ranking(){return [...cars].sort((a,b)=>a.finished&&b.finished?a.finishTime-b.finishTime:a.finished?-1:b.finished?1:b.progress-a.progress)}
 function finish(){mode='finished';keys.clear();banner('');$('touch').hidden=$('pause').hidden=true;$('result').hidden=false;const c=cars[0],order=ranking(),place=order.indexOf(c)+1;
  $('resultText').textContent='P'+place+' at '+track.def.name+' · '+clockText(c.finishTime)+' total · Best lap '+clockText(c.best);$('standings').replaceChildren();
- for(const row of order){const li=document.createElement('li'),time=document.createElement('span');li.textContent=row.number?'Groundline #'+numbers[row.number]:'You · #07';if(!row.number)li.className='you';time.textContent=row.finished?clockText(row.finishTime):Math.round(Math.max(0,5*track.length-row.progress))+' m to finish';li.append(time);$('standings').append(li)}
+ for(const row of order){const li=document.createElement('li'),time=document.createElement('span');li.textContent=row.number?'Groundline #'+numbers[row.number]:'You · #'+numbers[0];if(!row.number)li.className='you';time.textContent=row.finished?clockText(row.finishTime):Math.round(Math.max(0,5*track.length-row.progress))+' m to finish';li.append(time);$('standings').append(li)}
 }
 function step(dt){
  if(mode==='intro'){rollout(dt);return}
@@ -89,7 +89,7 @@ function step(dt){
  carContacts(cars);for(let i=0;i<cars.length;i++)updateModel(cars[i],models[i],dt);if(cars[0].finished){updateHud();finish()}
 }
 function updateHud(){const c=cars[0];$('pos').innerHTML=(ranking().indexOf(c)+1)+'<em>/ 6</em>';$('lap').innerHTML=Math.min(5,c.lap+1)+'<em>/ 5</em>';
- $('time').textContent=clockText(c.finished?c.lastLap:elapsed-c.lapStart);$('best').textContent='Best lap '+(Number.isFinite(c.best)?clockText(c.best):'—');$('velocity').textContent=String(Math.round(c.speed*3.6)).padStart(3,'0');$('gear').textContent=c.gear+1;$('rev').style.width=100*c.rpm/8250+'%';drawMap($('map'),track,cars)}
+ $('time').textContent=clockText(c.finished?c.lastLap:elapsed-c.lapStart);$('best').textContent='Best lap '+(Number.isFinite(c.best)?clockText(c.best):'—');$('velocity').textContent=String(Math.round(c.speed*3.6)).padStart(3,'0');$('gear').textContent=c.gear+1;$('rev').style.width=100*c.rpm/12500+'%';drawMap($('map'),track,cars)}
 function pause(){if(!['racing','intro','countdown'].includes(mode))return;previous=mode;mode='paused';keys.clear();$('pausePanel').hidden=false;$('pause').hidden=true;$('touch').hidden=true;$('recover').hidden=previous!=='racing';updateAudio()}
 function resume(){if(mode!=='paused')return;mode=previous;$('pausePanel').hidden=true;$('pause').hidden=false;$('touch').hidden=mode!=='racing';prevStamp=0}
 function recover(){const c=cars[0],fresh=makeDriver(track,c.progress,0,0);Object.assign(c,{x:fresh.x,z:fresh.z,heading:fresh.heading,speed:0,side:0,omega:0,steer:0,index:fresh.index,surface:fresh.surface,offset:0,acc:0,latAcc:0,gear:0});updateModel(c,models[0],0,true);updateCamera(1,true)}
@@ -102,5 +102,5 @@ for(const b of document.querySelectorAll('[data-key]')){b.onpointerdown=e=>{e.pr
 function frame(stamp){const dt=prevStamp?Math.min(.12,(stamp-prevStamp)/1000):0;prevStamp=stamp;
  if(mode!=='paused'&&mode!=='finished'){accumulator+=dt;while(accumulator>=1/120){step(1/120);accumulator-=1/120}updateCamera(dt);hudTimer+=dt;if(hudTimer>.09&&!$('racehud').hidden){updateHud();hudTimer=0}}
  updateAudio();renderer.render(world.scene,camera)}
-try{renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));camera=new T.PerspectiveCamera(57,1,.08,2600);setup(0);addEventListener('resize',resize);renderer.setAnimationLoop(frame)}
+try{renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));camera=new T.PerspectiveCamera(57,1,.08,2600);await loadRaceCar();setup(0);addEventListener('resize',resize);renderer.setAnimationLoop(frame)}
 catch(error){console.error(error);$('garage').hidden=true;$('raceError').hidden=false;$('raceError').textContent='The racing renderer could not start. Enable WebGL and hardware acceleration, then reload the garage.'}

@@ -1,19 +1,19 @@
 import {clamp,mod} from './circuits.js';
-const mass=1220,wheelbase=2.66,front=1.21,rear=wheelbase-front,gravity=9.81,ratios=[3.16,2.14,1.63,1.31,1.09,.90];
+const mass=812,wheelbase=3.48,front=1.57,rear=wheelbase-front,gravity=9.81,ratios=[3.85,3.02,2.48,2.08,1.79,1.55,1.36,1.21];
 export function makeDriver(track,s,lane,number){
  const p=track.sample(s,lane);return {x:p.x,z:p.z,heading:Math.atan2(p.tx,p.tz),speed:0,side:0,omega:0,steer:0,gear:0,rpm:1050,shift:0,acc:0,latAcc:0,
  progress:s,lap:0,best:Infinity,lastLap:0,lapStart:0,finished:false,finishTime:Infinity,number,lane,offset:lane,index:Math.floor(mod(s,track.length)/track.ds),surface:p,wheel:0,braking:0,throttle:0};
 }
 export function advance(c,input,track,dt){
  const v=c.speed,abs=Math.abs(v),off=Math.abs(c.offset)>track.width+.65;
- const mu=off?.57:1.29,load=mass*gravity+1.1*v*v,transfer=clamp(c.acc*mass*.43/wheelbase,-2100,2100);
+ const mu=off?.57:1.29,load=mass*gravity+2.5*v*v,transfer=clamp(c.acc*mass*.30/wheelbase,-2100,2100);
  const fzF=load*rear/wheelbase-transfer,fzR=load*front/wheelbase+transfer;
  c.steer+=(input.steer*(.55/(1+abs*.013))-c.steer)*(1-Math.exp(-dt*7.8));
  c.shift=Math.max(0,c.shift-dt);
- const wheelRpm=abs/.33*60/(2*Math.PI)*3.72;
- c.rpm=clamp(wheelRpm*ratios[c.gear],1050,8250);
- if(!c.shift){if(c.rpm>7620&&c.gear<5){c.gear++;c.shift=.13}else if(c.rpm<3850&&c.gear>0){c.gear--;c.shift=.1}}
- const torque=380+112*Math.sin(Math.PI*clamp((c.rpm-1000)/7400,0,1)),drive=c.shift?0:input.gas*torque*ratios[c.gear]*3.72*.90/.33;
+ const wheelRpm=abs/.365*60/(2*Math.PI)*4.05;
+ c.rpm=clamp(wheelRpm*ratios[c.gear],3200,12500);
+ if(!c.shift){if(c.rpm>11850&&c.gear<ratios.length-1){c.gear++;c.shift=.06}else if(c.rpm<7400&&c.gear>0){c.gear--;c.shift=.1}}
+ const torque=430+115*Math.sin(Math.PI*clamp((c.rpm-3200)/9300,0,1)),drive=c.shift?0:input.gas*torque*ratios[c.gear]*4.05*.90/.365;
  c.braking=input.brake;c.throttle=input.gas;
  const brake=input.brake*15500,dir=Math.sign(v||1),frontLong=clamp(-dir*brake*.62,-mu*fzF,mu*fzF);
  const rearLong=clamp(drive-dir*brake*.38,-mu*fzR*.91,mu*fzR*.85);
@@ -21,7 +21,7 @@ export function advance(c,input,track,dt){
  const gripF=Math.sqrt(Math.max(0,(fzF*mu)**2-frontLong**2)),gripR=Math.sqrt(Math.max(0,(fzR*mu)**2-rearLong**2));
  const fyF=gripF*Math.tanh(85000*slipF/Math.max(1,gripF)),fyR=gripR*Math.tanh(94000*slipR/Math.max(1,gripR));
  const cs=Math.cos(c.steer),sn=Math.sin(c.steer),yf=fyF*cs+frontLong*sn;
- const resist=.43*v*abs+(off?510:145)*Math.tanh(v)+(input.gas||abs<1?0:210);
+ const resist=.68*v*abs+(off?510:145)*Math.tanh(v)+(input.gas||abs<1?0:210);
  c.acc=(rearLong+frontLong*cs-fyF*sn-resist)/mass-gravity*c.surface.grade;
  c.latAcc=(yf+fyR)/mass+gravity*c.surface.bank;
  c.speed=clamp(v+dt*(c.acc+c.omega*c.side),0,88);
@@ -32,7 +32,7 @@ export function advance(c,input,track,dt){
  const sideslip=Math.abs(Math.atan2(c.side,denom)),assist=1.6+clamp(sideslip*18,0,8);
  c.omega+=(desiredYaw-c.omega)*(1-Math.exp(-dt*assist));
  c.heading+=c.omega*dt;const sin=Math.sin(c.heading),cos=Math.cos(c.heading);
- c.x+=dt*(sin*c.speed+cos*c.side);c.z+=dt*(cos*c.speed-sin*c.side);c.wheel+=c.speed*dt/.33;
+ c.x+=dt*(sin*c.speed+cos*c.side);c.z+=dt*(cos*c.speed-sin*c.side);c.wheel+=c.speed*dt/.365;
  const hit=track.locate(c.x,c.z,c.index),limit=track.width+5.7;
  if(Math.abs(hit.offset)>limit){
    const excess=hit.offset-Math.sign(hit.offset)*limit;c.x-=excess*hit.p.tz;c.z+=excess*hit.p.tx;
@@ -55,9 +55,9 @@ export function aiControl(c,track,field){
 }
 export function carContacts(cars){
  for(let i=0;i<cars.length;i++)for(let j=i+1;j<cars.length;j++){
-   const a=cars[i],b=cars[j],dx=b.x-a.x,dz=b.z-a.z;if(Math.abs(dx)>5||Math.abs(dz)>5)continue;
+   const a=cars[i],b=cars[j],dx=b.x-a.x,dz=b.z-a.z;if(Math.abs(dx)>6||Math.abs(dz)>6)continue;
    const sn=Math.sin(a.heading),cs=Math.cos(a.heading),ax=dx*cs-dz*sn,az=dx*sn+dz*cs;
-   const overlapX=1.87-Math.abs(ax),overlapZ=4.3-Math.abs(az);if(overlapX<=0||overlapZ<=0)continue;
+   const overlapX=1.98-Math.abs(ax),overlapZ=5.48-Math.abs(az);if(overlapX<=0||overlapZ<=0)continue;
    if(overlapX<overlapZ){const p=(Math.sign(ax)||1)*overlapX*.51;a.x-=cs*p;a.z+=sn*p;b.x+=cs*p;b.z-=sn*p;
      const closing=(a.side-b.side)*Math.sign(ax);if(closing>0){a.side-=closing*Math.sign(ax)*.52;b.side+=closing*Math.sign(ax)*.52}}
    else {const p=(Math.sign(az)||1)*overlapZ*.51;a.x-=sn*p;a.z-=cs*p;b.x+=sn*p;b.z+=cs*p;const rel=(a.speed-b.speed)*Math.sign(az);if(rel>0){a.speed-=rel*Math.sign(az)*.54;b.speed+=rel*Math.sign(az)*.54}}

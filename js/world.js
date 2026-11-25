@@ -68,7 +68,7 @@ export function buildWorld(track){
  box(pit,[10,5.5,.30],navy,0,2.7,-10);box(pit,[10.5,.28,19],steel,0,5.55,-1);
  for(let z=-8;z<8;z+=3.4){box(pit,[9.6,.13,.18],steel,0,5.28,z);box(pit,[4,.08,.20],new T.MeshBasicMaterial({color:0xfff0c4}),0,5.13,z)}
  for(const side of [-1,1]){box(pit,[.08,.5,17.8],red,side*4.66,1.65,-1);box(pit,[.30,5.6,.45],steel,side*4.75,2.75,7.85)}
- box(pit,[10,.70,.55],red,0,5.2,7.86);textBoard(pit,'GROUNDLINE  /  07',0,5.22,7.56,7.4,.55);batch(pit);
+ box(pit,[10,.70,.55],red,0,5.2,7.86);textBoard(pit,'GROUNDLINE  /  22',0,5.22,7.56,7.4,.55);batch(pit);
  const door=new T.Group();door.position.z=7.82;pit.add(door);
  for(let i=0;i<14;i++){box(door,[9.15,.338,.17],i%2?rails:pitMat,0,.19+i*.345,0);box(door,[9.1,.025,.035],steel,0,.345+i*.345,-.10)}
  textBoard(door,'GROUNDLINE',0,2.55,-.115,5.2,.80);batch(door);
