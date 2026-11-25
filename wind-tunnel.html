@@ -1,0 +1,1010 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111c2a"><title>Groundline · Wind tunnel</title>
+<style>
+:root {
+  color-scheme: dark;
+  --text: #f6f9ff;
+  --muted: #b7c8d6;
+  --accent: #b9f4e6;
+  --amber: #ffd6a0;
+  --edge-line: #deefff23;
+  --sans: "Avenir Next", "Segoe UI Variable Text", "Segoe UI", sans-serif;
+  --display: Bahnschrift, "Avenir Next", "Trebuchet MS", sans-serif;
+}
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body { margin: 0; background: #111c2a; color: var(--text); font: 14px/1.35 var(--sans); }
+button, select, input { font: inherit; color: inherit; }
+button, select, input[type=range], .switch { cursor: pointer; }
+button { border: 0; background: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.icon { width: 17px; height: 17px; flex: none; fill: none; stroke: currentColor; stroke-width: 1.65; stroke-linecap: round; stroke-linejoin: round; }
+
+#tunnel {
+  --edge: clamp(12px, 1.8vw, 32px);
+  --top-height: 58px;
+  --control-width: 264px;
+  --gap: 12px;
+  position: fixed; inset: 0; isolation: isolate;
+}
+#viewport {
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse at 36% 45%, #43586d 0%, #27394e 46%, transparent 76%),
+    radial-gradient(ellipse at 88% 79%, #263b52 8%, #111c2a 80%);
+}
+#scene { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#scene:active { cursor: grabbing; }
+#scene:focus-visible { outline-offset: -3px; }
+
+.glass {
+  --glass-top: #20354c;
+  --glass-base: #18283b;
+  color: var(--text);
+  border: 1px solid var(--edge-line);
+  border-top-color: #e7f8ff4a;
+  border-radius: 24px;
+  background:
+    radial-gradient(110% 85% at 12% 0%, #c9e4ff27, transparent 67%),
+    linear-gradient(152deg, var(--glass-top), var(--glass-base));
+  box-shadow: inset 0 1px 0 #f5fbff18, inset 0 -1px 0 #08101c35, 0 10px 32px #050b1a30, 0 2px 5px #050b1a26;
+}
+@supports (backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px)) {
+  .glass {
+    --glass-top: #23374a69;
+    --glass-base: #102030a8;
+    -webkit-backdrop-filter: blur(20px) saturate(155%);
+    backdrop-filter: blur(20px) saturate(155%);
+  }
+}
+
+.hud-top {
+  position: absolute; z-index: 3; top: var(--edge); left: var(--edge); right: var(--edge);
+  display: flex; align-items: center; justify-content: space-between; gap: 8px; height: var(--top-height);
+  pointer-events: none;
+}
+.hud-top .glass { pointer-events: auto; }
+.identity { display: flex; align-items: center; gap: 11px; height: 100%; padding: 0 17px 0 10px; border-radius: 32px; }
+.brand-mark {
+  display: grid; place-items: center; width: 38px; height: 38px; flex: none;
+  border: 1px solid #c9fdf068; border-radius: 50%; color: #1a3d45;
+  background: radial-gradient(circle at 25% 0%, #e9fff7, #b0eee3 50%, #82bed0);
+  box-shadow: inset 0 1px 1px #fff9, 0 2px 8px #0a1e3c45;
+}
+.brand-mark svg { width: 24px; height: 24px; }
+.identity h1 { margin: 0; font: 650 25px/.98 var(--display); letter-spacing: -.045em; }
+.identity p { margin: 4px 0 0; font-size: 11px; font-weight: 550; color: var(--muted); }
+
+.view-hud, .hud-cluster { display: flex; align-items: center; gap: 4px; }
+.view-hud { gap: 9px; }
+.hud-cluster { padding: 4px; border-radius: 32px; }
+.chip {
+  display: inline-flex; align-items: center; gap: 7px; min-height: 34px; padding: 0 12px;
+  border-radius: 999px; white-space: nowrap; color: #e4f2f4; font-size: 11px; font-weight: 600;
+}
+.dot { width: 7px; height: 7px; flex: none; border-radius: 50%; background: var(--accent); box-shadow: 0 0 9px #adebdf80; }
+.chip.paused .dot { background: #b2c1d0; box-shadow: none; }
+.hudbutton, .viewselect {
+  display: inline-flex; align-items: center; justify-content: center; flex: none;
+  min-height: 42px; border-radius: 999px; color: #e3eef9;
+}
+.hudbutton { width: 42px; }
+.viewselect { position: relative; gap: 6px; padding: 0 10px; font-size: 12px; font-weight: 600; }
+.viewselect select { position: absolute; inset: 0; width: 100%; height: 100%; opacity: 0; }
+.viewselect:focus-within { outline: 2px solid var(--accent); outline-offset: -2px; }
+select option { background: #24364a; }
+.chevron { width: 12px; }
+.hudbutton:hover, .viewselect:hover, .reset:hover, .tele-head button:hover, dialog button:hover { background: #d7edff1e; }
+.hudbutton[aria-expanded="true"] {
+  color: var(--accent); background: #bcfde422; box-shadow: inset 0 0 0 1px #d2ffed38;
+}
+
+.controls {
+  position: absolute; z-index: 3; top: calc(var(--edge) + var(--top-height) + var(--gap)); right: var(--edge);
+  width: min(var(--control-width), calc(100% - 2 * var(--edge)));
+  max-height: calc(100% - 2 * var(--edge) - var(--top-height) - var(--gap));
+  overflow: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #b1c8d66b transparent;
+  padding: 15px 17px 16px; --glass-base: #132437ae;
+}
+.section-top { display: flex; align-items: center; gap: 8px; }
+.section-top .icon { color: var(--accent); }
+.section-top h2 { margin: 0; font: 650 18px/1.15 var(--display); letter-spacing: -.025em; }
+.section-label { margin: 14px 0 7px; color: var(--muted); font-size: 11px; font-weight: 650; }
+.slider { margin-bottom: 8px; }
+.slider-head, .setting { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.slider-head label, .setting label { color: #e7eff9; font-size: 12px; }
+.slider-head output, .range-limits, .reading, .legend small { font-variant-numeric: tabular-nums; }
+.slider-head output { color: var(--accent); font: 600 14px var(--display); }
+.slider-head output em { color: var(--muted); font: 11px var(--sans); }
+input[type=range] { display: block; width: 100%; height: 19px; padding: 0; margin: 1px 0 0; background: transparent; appearance: none; }
+input[type=range]::-webkit-slider-runnable-track { height: 4px; border-radius: 99px; background: linear-gradient(to right, var(--accent) var(--p), #b7cbde3b var(--p)); }
+input[type=range]::-moz-range-track { height: 4px; border-radius: 99px; background: linear-gradient(to right, var(--accent) var(--p), #b7cbde3b var(--p)); }
+input[type=range]::-webkit-slider-thumb {
+  appearance: none; width: 14px; height: 14px; margin-top: -5px; border-radius: 50%;
+  background: #f4fffd; border: 1px solid #e5fffc; box-shadow: 0 1px 5px #09172991;
+}
+input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: 1px solid #e5fffc; border-radius: 50%; background: #f4fffd; box-shadow: 0 1px 5px #09172991; }
+.range-limits { display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+.control-divider { height: 1px; margin-top: 12px; background: var(--edge-line); }
+.setting { min-height: 32px; }
+.setting label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.setting .icon { width: 15px; color: #c3d8e9; }
+.switch {
+  appearance: none; position: relative; width: 36px; height: 21px; flex: none; margin: 0;
+  border: 1px solid #deefff45; border-radius: 99px; background: #b9d3eb30;
+}
+.switch::before {
+  content: ""; position: absolute; top: 2px; left: 2px; width: 15px; height: 15px; border-radius: 50%;
+  background: #f2f7fd; box-shadow: 0 1px 4px #13253855; transition: transform .18s ease;
+}
+.switch:checked { background: #a6ece1; border-color: #dbfff5; }
+.switch:checked::before { transform: translateX(15px); }
+.inspect { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 34px; padding: 5px 0; color: var(--amber); font-size: 12px; }
+.inspect:hover { text-decoration: underline; }
+.tracer-key { display: block; width: 14px; height: 3px; flex: none; border-radius: 2px; background: #ffbf72; box-shadow: 0 0 6px #ffbf7266; }
+.playrow { display: flex; gap: 6px; margin-top: 6px; }
+.play, .reset { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; border-radius: 99px; font-size: 12px; font-weight: 650; }
+.play { flex: 1; background: linear-gradient(125deg, #d4fff2, #a7ddd9); color: #172f37; box-shadow: inset 0 1px 0 #fff8; }
+.play:hover { background: #dafff6; }
+.play .icon { width: 14px; }
+.reset { width: 38px; background: #c5def215; box-shadow: inset 0 0 0 1px #ddecfa2e; }
+
+.hud-bottom {
+  position: absolute; z-index: 1; left: var(--edge); bottom: var(--edge);
+  display: grid; gap: 8px; justify-items: start; width: min(800px, calc(100% - 2 * var(--edge)));
+  pointer-events: none;
+}
+.view-bottom { display: flex; align-items: center; gap: 14px; max-width: 100%; }
+.legend { min-width: 170px; padding: 10px 13px; border-radius: 17px; }
+.legend-title, .legend small, #floorKey { display: flex; align-items: center; gap: 7px; font-size: 11px; }
+.legend-title i { margin-left: auto; font: 11px var(--display); color: var(--muted); }
+.gradient { height: 4px; border-radius: 99px; margin: 6px 0 3px; background: linear-gradient(90deg, #5363b8, #4daacb, #70e0cf, #dfef93); }
+.legend small { justify-content: space-between; color: var(--muted); font-size: 10px; }
+#floorKey { color: var(--amber); }
+#scalarLegend:not([hidden]) + #floorKey:not([hidden]) { margin-top: 7px; }
+.hint { display: flex; align-items: center; gap: 5px; color: #d5e4ef; font-size: 11px; text-shadow: 0 1px 5px #101925; }
+.hint .icon { width: 14px; }
+
+.telemetry { width: 100%; padding: 9px 13px 12px; pointer-events: auto; }
+.tele-head { display: flex; align-items: center; gap: 7px; min-height: 29px; margin-bottom: 5px; }
+.tele-head .section-top h2 { font-size: 16px; }
+.tele-head > span { margin-left: auto; color: var(--muted); font-size: 11px; }
+.tele-head button, dialog button { display: grid; place-items: center; width: 34px; height: 30px; border-radius: 99px; color: #deedf7; }
+.tele-head button .icon { width: 19px; }
+.tele-head button[aria-expanded="false"] .icon { transform: rotate(180deg); }
+.telemetry:has(.metrics[hidden]) { width: max-content; padding: 4px 6px 4px 12px; border-radius: 999px; }
+.telemetry:has(.metrics[hidden]) .tele-head { margin: 0; }
+.telemetry:has(.metrics[hidden]) .tele-head > span { display: none; }
+.metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.metric { min-width: 0; border-left: 1px solid var(--edge-line); padding: 0 clamp(6px, 1vw, 15px); }
+.metric:first-child { border-left: 0; padding-left: 0; }
+.tele-label { color: #dce7f3; font-size: 11px; line-height: 1.15; }
+.reading { display: flex; align-items: baseline; gap: 4px; margin-top: 5px; font: 600 clamp(21px, 2.1vw, 32px)/1 var(--display); letter-spacing: -.04em; white-space: nowrap; }
+.reading small { color: var(--muted); font: 11px var(--sans); letter-spacing: 0; }
+.metric:last-child .reading { color: var(--accent); }
+.tele-caption { margin-top: 4px; color: var(--muted); font-size: 10px; }
+.footer {
+  display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px 12px;
+  width: 100%; padding: 0 4px; color: #c8d9e8; font-size: 10px; text-shadow: 0 1px 5px #101925;
+}
+.footer > span { display: flex; align-items: center; gap: 6px; }
+.footer i { width: 5px; height: 5px; border-radius: 50%; background: var(--accent); }
+
+dialog.glass { max-width: min(470px, calc(100% - 32px)); padding: 22px; --glass-base: #10202ee8; }
+dialog::backdrop { background: #070c19a3; backdrop-filter: blur(5px); }
+dialog h2 { margin: 0; font: 650 25px var(--display); }
+dialog h3 { margin: 18px 0 4px; color: var(--accent); font-size: 13px; }
+dialog p { margin: 7px 0; color: #cedce9; font-size: 13px; line-height: 1.6; }
+dialog button { float: right; }
+.fallback { position: absolute; inset: 38% auto auto 50%; width: min(370px, 75vw); transform: translateX(-50%); padding: 18px; }
+
+@media (min-width: 821px) {
+  #tunnel:has(.controls:not([hidden])) .hud-bottom {
+    width: min(800px, calc(100% - 2 * var(--edge) - var(--control-width) - var(--gap)));
+  }
+}
+@media (max-width: 1050px), (max-height: 660px) {
+  .tele-caption { display: none; }
+}
+@media (max-width: 820px), (max-height: 580px) {
+  .hint { display: none; }
+}
+@media (max-width: 820px) {
+  .controls {
+    max-height: max(90px, calc(100% - 2 * var(--edge) - var(--top-height) - var(--gap) - var(--dock-height, 0px) - 8px));
+  }
+}
+@media (max-width: 600px) {
+  #tunnel { --top-height: 52px; }
+  .identity { padding-right: 12px; gap: 8px; }
+  .identity h1 { font-size: 22px; }
+  .brand-mark { width: 31px; height: 31px; }
+  .brand-mark svg { width: 21px; height: 21px; }
+  .hud-cluster { gap: 2px; }
+  .hudbutton { width: 39px; }
+  .hudbutton, .viewselect { min-height: 40px; }
+  .chip { position: absolute; top: calc(100% + 8px); left: 0; min-height: 28px; }
+  .controls { --gap: 44px; padding: 13px 15px; }
+  .controls .section-label { margin-top: 12px; }
+  .slider { margin-bottom: 5px; }
+  .setting { min-height: 29px; }
+  .metrics { grid-template-columns: repeat(3, minmax(0, 1fr)); row-gap: 12px; }
+  .metric:nth-child(4) { padding-left: 0; border-left: 0; }
+  .legend { min-width: 154px; }
+  .telemetry { padding: 8px 12px 10px; }
+}
+@media (max-width: 455px) {
+  #viewLabel { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  .viewselect { padding: 0 7px; gap: 3px; }
+  .footer > span:last-child { display: none; }
+}
+@media (max-width: 355px) {
+  #tunnel { --edge: 8px; }
+  .identity { padding: 0 10px 0 7px; gap: 6px; }
+  .hud-top { gap: 5px; }
+  .identity h1 { font-size: 19px; }
+  .brand-mark { width: 28px; height: 28px; }
+  .hud-cluster { gap: 1px; padding: 3px; }
+  .hudbutton { width: 33px; }
+}
+@media (max-height: 430px) {
+  .view-bottom { display: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; }
+}
+.aero-guide { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+.aero-leaders { position: absolute; inset: 0; width: 100%; height: 100%; overflow: hidden; }
+.aero-leaders line { stroke: #c8ede7ac; stroke-width: 1.15; }
+.aero-leaders circle { fill: #b9f4e6; stroke: #142c3b; stroke-width: 1.4; }
+.aero-leaders .selected line { stroke: #d7fff4; stroke-width: 1.6; }
+.aero-leaders .selected circle { fill: #effff8; }
+.aero-pin {
+  position: absolute; top: 0; left: 0; display: flex; align-items: center; gap: 6px;
+  min-height: 34px; padding: 4px 9px 4px 4px; border-radius: 99px; white-space: nowrap;
+  pointer-events: auto; font-size: 12px; font-weight: 650;
+  --glass-base: #152c3ddc;
+}
+.aero-pin > span {
+  display: grid; place-items: center; min-width: 22px; height: 22px; padding: 0 3px;
+  border-radius: 50%; background: #b9f4e6; color: #173a42; font: 650 12px var(--display);
+}
+.aero-pin:hover, .aero-pin[aria-expanded="true"] {
+  background: linear-gradient(145deg, #e5fff7, #9bd9d2); color: #152f36; border-color: #e4fff4;
+}
+.aero-pin:hover > span, .aero-pin[aria-expanded="true"] > span { background: #204754; color: #effffb; }
+.aero-detail {
+  position: absolute; top: 0; left: 0; width: min(286px, calc(100% - 20px)); max-height: calc(100% - 20px);
+  overflow: auto; overscroll-behavior: contain; pointer-events: auto; padding: 14px 16px;
+  border-radius: 19px; --glass-base: #0f2333f0;
+}
+.aero-detail h2 { margin: 0 36px 7px 0; font: 650 19px/1.1 var(--display); }
+.aero-detail p { margin: 0; color: #e5eff8; font-size: 13px; line-height: 1.43; }
+.aero-detail .aero-try { margin-top: 9px; color: #c2dbe5; }
+.aero-try strong { color: var(--accent); }
+.aero-source { display: inline-block; margin-top: 8px; color: var(--accent); font-size: 11px; text-underline-offset: 3px; }
+.aero-close {
+  position: absolute; right: 6px; top: 6px; display: grid; place-items: center; width: 34px; height: 34px;
+  border-radius: 50%; color: #e3eff7;
+}
+.aero-close:hover { background: #d7edff1e; }
+@media (max-width: 600px) {
+  .aero-pin { min-height: 38px; font-size: 11px; }
+  .aero-detail { width: min(262px, calc(100% - 20px)); }
+}
+</style>
+</head>
+<body>
+<svg xmlns="http://www.w3.org/2000/svg" width="0" height="0" aria-hidden="true" style="position:absolute"><defs>
+<symbol id="book" viewBox="0 0 24 24"><path d="M3 4.5c3-1.2 6-.8 9 1.2 3-2 6-2.4 9-1.2v14c-3-1.1-6-.8-9 1.1-3-1.9-6-2.2-9-1.1zM12 6v13"/></symbol>
+<symbol id="sliders" viewBox="0 0 24 24"><path d="M3 6h6m5 0h7M3 12h11m5 0h2M3 18h3m5 0h10"/><circle cx="11.5" cy="6" r="2.1"/><circle cx="16.5" cy="12" r="2.1"/><circle cx="8.5" cy="18" r="2.1"/></symbol>
+<symbol id="stream" viewBox="0 0 24 24"><path d="M2 7h10c5 0 4-4 1-4M2 12h16c5 0 5 6 1 6M2 17h7c3 0 4 4 1 4"/></symbol>
+<symbol id="layers" viewBox="0 0 24 24"><path d="m3 8 9-5 9 5-9 5zM3 12l9 5 9-5M3 16l9 5 9-5"/></symbol>
+<symbol id="cube" viewBox="0 0 24 24"><path d="m3 7 9-5 9 5v10l-9 5-9-5zM3 7l9 5 9-5M12 12v10"/></symbol>
+<symbol id="expand" viewBox="0 0 24 24"><path d="M9 4H4v5m11-5h5v5M4 15v5h5m11-5v5h-5"/></symbol>
+<symbol id="down" viewBox="0 0 24 24"><path d="m7 10 5 5 5-5"/></symbol>
+<symbol id="orbit" viewBox="0 0 24 24"><ellipse cx="12" cy="12" rx="10" ry="5" transform="rotate(-32 12 12)"/><circle cx="12" cy="12" r="2"/></symbol>
+<symbol id="pause" viewBox="0 0 24 24"><path d="M8 5v14m8-14v14" stroke-width="4"/></symbol><symbol id="play-symbol" viewBox="0 0 24 24"><path d="m7 4 13 8-13 8z" fill="currentColor"/></symbol>
+<symbol id="reset" viewBox="0 0 24 24"><path d="M4 10a8 8 0 1 1 2 8M4 4v6h6"/></symbol><symbol id="pulse" viewBox="0 0 24 24"><path d="M2 13h5l3-8 4 14 3-8 2 2h3"/></symbol>
+<symbol id="close" viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></symbol></defs></svg>
+<main id="tunnel" aria-label="Groundline interactive wind tunnel">
+<section class="viewport" id="viewport"><canvas id="scene" tabindex="0" aria-label="3D car. Drag or use arrow keys to orbit, scroll or use plus and minus to zoom."></canvas></section>
+<div class="hud-top">
+<header class="identity glass"><span class="brand-mark" aria-hidden="true"><svg class="icon" viewBox="0 0 28 28"><path d="M4 11h5c4 0 4.3-4.5 9-4.5h6M4 15h7c4 0 5 5 9 5h4M4 23h20"/><circle cx="20" cy="13" r="2.5"/></svg></span><div><h1>Groundline</h1><p>Wind tunnel</p></div></header>
+<div class="view-hud"><div class="chip glass" id="state"><span class="dot"></span><span id="stateText">Flow running</span></div><div class="hud-cluster glass"><label class="viewselect"><svg class="icon"><use href="#cube"/></svg><span id="viewLabel">Perspective</span><svg class="icon chevron"><use href="#down"/></svg><select id="camera" aria-label="Camera view"><option>Perspective</option><option>Front</option><option>Side</option><option>Top</option><option>Underfloor</option></select></label><button class="hudbutton" id="controlToggle" aria-label="Tunnel controls" aria-controls="controlPanel" aria-expanded="true" title="Tunnel controls"><svg class="icon"><use href="#sliders"/></svg></button><button class="hudbutton" id="notes" aria-label="Model notes" title="Model notes"><svg class="icon"><use href="#book"/></svg></button><button class="hudbutton" id="expandView" aria-label="Toggle fullscreen" title="Toggle fullscreen"><svg class="icon"><use href="#expand"/></svg></button></div></div>
+</div>
+<aside class="controls glass" id="controlPanel"><div class="section-top"><svg class="icon"><use href="#sliders"/></svg><h2>Tunnel controls</h2></div>
+<div><div class="section-label">Flow conditions</div>
+<div class="slider"><div class="slider-head"><label for="speed">Air speed</label><output id="speedOut" for="speed"></output></div><input type="range" id="speed" min="20" max="90" value="60" style="--p:57%"><div class="range-limits"><span>20 m/s</span><span>90 m/s</span></div></div>
+<div class="slider"><div class="slider-head"><label for="yaw">Yaw angle</label><output id="yawOut" for="yaw"></output></div><input type="range" id="yaw" min="-12" max="12" value="0" style="--p:50%"><div class="range-limits"><span>−12°</span><span>+12°</span></div></div>
+<div class="slider"><div class="slider-head"><label for="wing">Rear wing incidence</label><output id="wingOut" for="wing"></output></div><input type="range" id="wing" min="8" max="28" value="18" style="--p:50%"><div class="range-limits"><span>8°</span><span>28°</span></div></div></div>
+<div><div class="control-divider"></div><div class="section-label">Visualization</div><div class="setting"><label for="streams"><svg class="icon"><use href="#stream"/></svg>Streamlines</label><input type="checkbox" class="switch" role="switch" id="streams" checked></div><div class="setting"><label for="heat"><svg class="icon"><use href="#layers"/></svg>Pressure map</label><input type="checkbox" class="switch" role="switch" id="heat"></div><div class="setting"><label for="floorTraces"><i class="tracer-key"></i>Undertray tracers</label><input type="checkbox" class="switch" role="switch" id="floorTraces" checked></div><div class="setting"><label for="guideToggle"><svg class="icon" aria-hidden="true"><use href="#book"/></svg>Aerodynamics guide</label><input type="checkbox" class="switch" role="switch" id="guideToggle" aria-controls="aeroGuide"></div>
+<button class="inspect" id="inspectFloor">Inspect undertray <svg class="icon" aria-hidden="true"><use href="#orbit"/></svg></button><div class="playrow"><button class="play" id="play"><svg class="icon"><use id="playIcon" href="#pause"/></svg><span id="playText">Pause flow</span></button><button id="resetAll" class="reset" title="Reset tunnel and camera" aria-label="Reset tunnel and camera"><svg class="icon"><use href="#reset"/></svg></button></div></div></aside>
+<div class="aero-guide" id="aeroGuide" role="group" aria-label="Aerodynamic hotspots" hidden>
+  <svg class="aero-leaders" id="aeroLeaders" aria-hidden="true"></svg>
+  <aside class="aero-detail glass" id="aeroDetail" aria-labelledby="aeroTitle" tabindex="-1" hidden>
+    <button class="aero-close" type="button" id="aeroClose" aria-label="Close explanation"><svg class="icon" aria-hidden="true"><use href="#close"/></svg></button>
+    <h2 id="aeroTitle"></h2>
+    <p id="aeroExplanation"></p>
+    <p class="aero-try"><strong>Try it.</strong> <span id="aeroTry"></span></p>
+    <a class="aero-source" id="aeroSource" target="_blank" rel="noopener noreferrer">Read more ↗</a>
+  </aside>
+</div>
+<div class="hud-bottom">
+<div class="view-bottom"><div class="legend glass"><div id="scalarLegend"><div class="legend-title"><span id="legendName">Relative air speed</span><i id="legendSymbol">u/U∞</i></div><div class="gradient" id="gradient"></div><small><span id="legendLow">0.4</span><span id="legendMid">1.0</span><span id="legendHigh">1.6</span></small></div><div id="floorKey"><i class="tracer-key"></i>Undertray tracers</div></div><span class="hint"><svg class="icon"><use href="#orbit"/></svg>Drag to orbit &nbsp;·&nbsp; Scroll to zoom</span></div>
+<section class="telemetry glass"><div class="tele-head"><div class="section-top"><svg class="icon"><use href="#pulse"/></svg><h2>Aerodynamic telemetry</h2></div><span>Model estimates</span><button id="teleToggle" aria-controls="readouts" aria-expanded="true" aria-label="Toggle telemetry" title="Toggle telemetry"><svg class="icon"><use href="#down"/></svg></button></div>
+<div class="metrics" id="readouts"><div class="metric"><div class="tele-label">Reynolds number</div><div class="reading"><span id="reynolds">—</span><small>×10⁶</small></div><div class="tele-caption">Re · car length</div></div><div class="metric"><div class="tele-label">Drag coefficient</div><div class="reading" id="cd">—</div><div class="tele-caption">Cᴅ · wind axis</div></div><div class="metric"><div class="tele-label">Lift coefficient</div><div class="reading" id="cl">—</div><div class="tele-caption">Cʟ · upward positive</div></div><div class="metric"><div class="tele-label">Drag force</div><div class="reading"><span id="drag">—</span><small>kN</small></div><div class="tele-caption">D · aerodynamic drag</div></div><div class="metric"><div class="tele-label">Downforce</div><div class="reading"><span id="force">—</span><small>kN</small></div><div class="tele-caption">−L · vertical load</div></div></div></section>
+<div class="footer"><span><i></i><span id="solverStatus" role="status">Initializing flow field</span></span><span>ρ 1.225 kg/m³ &nbsp;·&nbsp; 15 °C</span></div>
+</div>
+</main>
+<dialog class="glass" id="dialog" aria-labelledby="notesTitle"><button aria-label="Close model notes" id="closeNotes"><svg class="icon"><use href="#close"/></svg></button><h2 id="notesTitle">Model notes</h2><h3>Airflow and pressure</h3><p>A three-dimensional potential-flow solve diverts air around a voxel representation of the car above a slip ground plane. Traces follow the steady velocity field with approximate wheel wakes and wing-tip vortices. Amber tracers sample a prescribed counter-rotating vortex pair inside the two floor tunnels. The reduced-order tunnel model follows the local passage height through the throat and diffuser. Vortex strength is illustrative. Moving highlights show relative travel time in slow motion.</p><p>The surface map shows estimated pressure coefficient, Cₚ = (p − p∞)/q. Near-surface speed, surface orientation and prescribed wing and floor loading shape the estimate. The colour scale is fixed across speeds.</p><h3>Loads and scale</h3><p>Re = ρUL/μ, with L = 5.50 m and μ = 1.81 × 10⁻⁵ Pa·s. Loads use q = ½ρU² and reference area A = 1.50 m². The illustrative whole-car lift and drag curves depend on rear wing incidence and yaw. They are independent of the surface pressure colours.</p><h3>Model limits</h3><p>This generic ground-effect chassis has no team-specific calibration. Boundary layers, wheel rotation effects, transient turbulence and stall are unresolved. Use the results to compare settings qualitatively.</p></dialog>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),PI=Math.PI,TAU=2*PI,rad=x=>x*PI/180;
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x)),mix=(a,b,t)=>a+(b-a)*t;
+const add=(a,b)=>a.map((v,i)=>v+b[i]),sub=(a,b)=>a.map((v,i)=>v-b[i]),scale=(a,s)=>a.map(v=>v*s),dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
+const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]],unit=a=>scale(a,1/(Math.hypot(...a)||1));
+const rgb=hex=>[16,8,0].map(s=>((parseInt(hex,16)>>s)&255)/255);
+const lime=rgb("c6f137"),light=rgb("e7fc80"),navy=rgb("192f42"),blue=rgb("244a60"),carbon=rgb("252a31"),black=rgb("10161c"),rubber=rgb("34363c"),silver=rgb("a7b5be"),gold=rgb("d2b761"),white=rgb("e7efec");
+// Each part contributes to the same indexed draw. Material codes distinguish lacquer, carbon,
+// rubber, alloy, sidepod graphics, the helmet visor, and printed atlas patches.
+let vertices=[],indices=[],obstacles=[],incidence=18;
+function vertex(p,n,col,mat,uv=[0,0],zone=0){vertices.push(...p,...n,...col,mat,...uv,zone);return vertices.length/13-1}
+function surface(nu,nv,fn,col,mat,zone=0,flip=1,uvFn=null){
+ const base=vertices.length/13;
+ for(let i=0;i<=nu;i++)for(let j=0;j<=nv;j++){
+  const u=i/nu,v=j/nv,p=fn(u,v),eu=.0002,ev=.0002;
+  const du=sub(fn(Math.min(1,u+eu),v),fn(Math.max(0,u-eu),v)),dv=sub(fn(u,Math.min(1,v+ev)),fn(u,Math.max(0,v-ev)));
+  vertex(p,scale(unit(cross(du,dv)),flip),col,mat,uvFn?uvFn(u,v):[u,v],zone);
+ }
+ for(let i=0;i<nu;i++)for(let j=0;j<nv;j++){const a=base+i*(nv+1)+j,b=a+nv+1;indices.push(a,b,a+1,a+1,b,b+1)}
+}
+function tri(a,b,c,col,mat,zone=0){let n=unit(cross(sub(b,a),sub(c,a))),i=vertex(a,n,col,mat,[0,0],zone);vertex(b,n,col,mat,[1,0],zone);vertex(c,n,col,mat,[0,1],zone);indices.push(i,i+1,i+2)}
+function plate(outline,z,thick,col,mat=1,zone=0){
+ const area=outline.reduce((sum,[x,y],i)=>{const [xn,yn]=outline[(i+1)%outline.length];return sum+x*yn-y*xn},0);
+ if(area<0)outline=outline.slice().reverse();
+ for(let s of [-1,1])for(let i=1;i<outline.length-1;i++){let vs=[0,i,i+1].map(k=>[...outline[k],z+s*thick/2]);if(s<0)vs.reverse();tri(...vs,col,mat,zone)}
+ for(let i=0;i<outline.length;i++){let j=(i+1)%outline.length,a=[...outline[i],z-thick/2],b=[...outline[j],z-thick/2],c=[...outline[j],z+thick/2],d=[...outline[i],z+thick/2];tri(a,b,c,col,mat,zone);tri(a,c,d,col,mat,zone)}
+}
+function rod(a,b,r,col=carbon,mat=1,r2=r){const t=unit(sub(b,a)),v=unit(cross(t,Math.abs(t[1])<.8?[0,1,0]:[1,0,0])),w=cross(t,v);
+ surface(1,9,(f,k)=>add(add(a,scale(sub(b,a),f)),scale(add(scale(v,Math.cos(k*TAU)),scale(w,Math.sin(k*TAU))),mix(r,r2,f))),col,mat,0,-1)}
+function pipe(path,r,col=carbon,mat=1){for(let i=1;i<path.length;i++)rod(path[i-1],path[i],r,col,mat)}
+function sphere(center,r,col,mat,zone=0){surface(23,14,(u,v)=>{let a=u*TAU,b=mix(-PI/2+.001,PI/2-.001,v);return add(center,[r[0]*Math.cos(a)*Math.cos(b),r[1]*Math.sin(b),r[2]*Math.sin(a)*Math.cos(b)])},col,mat,zone,-1)}
+function section(stations,x){
+ let j=0;while(j<stations.length-2&&x>stations[j+1][0])j++;
+ const a=stations[j],b=stations[j+1],dt=b[0]-a[0],t=clamp((x-a[0])/dt,0,1);
+ return a.slice(1).map((v,k)=>{const m=k+1,prev=stations[Math.max(0,j-1)],next=stations[Math.min(stations.length-1,j+2)];
+ const sec=(b[m]-v)/dt,sl=(v-prev[m])/(a[0]-prev[0]||1),sr=(next[m]-b[m])/(next[0]-b[0]||1);
+ const h0=j===0?sec:sl*sec<=0?0:2*sl*sec/(sl+sec),h1=j===stations.length-2?sec:sr*sec<=0?0:2*sr*sec/(sr+sec);
+ return mix(v,b[m],t*t*(3-2*t))+dt*t*(1-t)*((1-t)*h0-t*h1)})}
+const spow=(n,e)=>Math.sign(n)*Math.pow(Math.abs(n),e);
+function loft(st,col,mat=0,zone=0,power=.82,collision=true){
+ const x0=st[0][0],len=st.at(-1)[0]-x0;
+ const point=(x,a)=>{let [cy,ry,rz,cz]=section(st,x);return [x,cy+ry*spow(Math.sin(a),power),cz+rz*spow(Math.cos(a),power)]};
+ surface(Math.max(24,st.length*5),32,(u,v)=>point(x0+u*len,TAU*v),col,mat,zone);
+ for(let end of [0,1]){let x=x0+end*len,[cy,,,cz]=section(st,x);for(let j=0;j<32;j++){let a=point(x,j*TAU/32),b=point(x,(j+1)*TAU/32);tri([x,cy,cz],...(end?[b,a]:[a,b]),col,mat,zone)}}
+ if(collision){const intervals=Math.ceil(len/.045);obstacles.push({type:"loft",sections:Array.from({length:intervals+1},(_,i)=>section(st,x0+len*i/intervals)),x0,len,power})}
+ return point;
+}
+function atlasUV(row,u,v){return [u,(3-row+v)/4]}
+function printPatch(point,side,x0,x1,a0,a1,row){surface(24,8,(u,v)=>{const x=mix(x0,x1,side>0?u:1-u),a=mix(a0,a1,v);let p=point(x,side>0?a:PI-a);p[2]+=.004*side;return p},white,6,0,1,(u,v)=>atlasUV(row,u,v))}
+// Inverted airfoil with a rounded leading edge, finite trailing edge and separate flap slots.
+function foil(x,y,span,chord,angle,col,mat,zone,shape=0){
+ const a=rad(angle),cfg={type:"foil",x,y,span,chord,a,shape};obstacles.push(cfg);
+ for(let side of [-1,1])surface(28,32,(u,v)=>{let z=(v*2-1)*span,s=Math.abs(z/span),c=chord*(1-.15*s*s),t=(1-Math.cos(PI*u))/2;
+ const thick=c*.50*(.2969*Math.sqrt(t)-.126*t-.3516*t*t+.2843*t*t*t-.1015*t**4);
+ const h=c*(-.046*Math.sin(PI*t))+side*(thick+.0009);
+ return [x+.15*shape*s*s+c*t*Math.cos(a)-h*Math.sin(a),y+.075*shape*s*s+c*t*Math.sin(a)+h*Math.cos(a),z]},col,mat,zone,-side);
+}
+function wheel(x,z,hwidth){const r=.365,cy=.37,side=Math.sign(z),profile=[[-1,.73],[-1,.83],[-.98,.90],[-.94,.955],[-.84,.987],[-.66,1],[-.30,1.005],[.30,1.005],[.66,1],[.84,.987],[.94,.955],[.98,.90],[1,.83],[1,.73]];
+ for(let k=0;k<profile.length-1;k++)surface(68,1,(u,v)=>{let a=u*TAU,rr=r*mix(profile[k][1],profile[k+1][1],v);return [x+rr*Math.cos(a),cy+rr*Math.sin(a),z+hwidth*mix(profile[k][0],profile[k+1][0],v)]},rubber,2,1);
+ obstacles.push({type:"wheel",x,z,h:hwidth,r,cy});
+ function disc(face,rr,rr2,offset,col,mat,depth=0){surface(72,2,(u,v)=>{let a=TAU*u,rv=mix(rr,rr2,v);return [x+rv*Math.cos(a),cy+rv*Math.sin(a),z+face*(hwidth+offset+v*depth)]},col,mat,1,face)}
+ for(let face of [-1,1]){
+  disc(face,.277,.024,-.008,black,1,.008);disc(face,.273,.252,.0002,silver,3,-.011);
+  disc(face,.257,.089,-.011,carbon,1,.008);
+  for(let j=0;j<18;j++){let a=j*TAU/18;let vs=[[.087,a-.06,.002],[.25,a+.16,.002],[.247,a+.28,-.0008],[.104,a+.055,.004]].map(([rr,aa,o])=>[x+rr*Math.cos(aa),cy+rr*Math.sin(aa),z+face*(hwidth+o)]);tri(vs[0],vs[1],vs[2],blue,3,1);tri(vs[0],vs[2],vs[3],carbon,3,1)}
+  disc(face,.097,.076,.006,silver,3,.003);disc(face,.075,.044,.009,black,1);disc(face,.045,.001,.011,gold,3,.003);
+  disc(face,.306,.302,.001,gold,0);disc(face,.285,.283,.001,carbon,1);
+  if(face===side)for(let base of [.28,3.42]){surface(20,1,(u,v)=>{let a=base+u*.96,rr=mix(.309,.339,v);return [x+rr*Math.cos(a),cy+rr*Math.sin(a),z+face*(hwidth*(1-.055*v)+.0024)]},gold,6,1,-face,(u,v)=>atlasUV(2,face>0?1-u:u,v))}
+ }
+}
+let wingVertexOffset,wingObstacleOffset;
+// All dimensions are metres. The mesh and worker use this same passage profile.
+function floorSection(x,z){
+ const smooth=t=>{t=Math.max(0,Math.min(1,t));return t*t*(3-2*t)};
+ const inlet=smooth((x+1.26)/.52),throat=smooth((x+.78)/.97),diffuser=smooth((x-.74)/1.63);
+ const width=.56+.25*inlet-.195*diffuser, f=Math.min(1,Math.abs(z)/width);
+ const arch=smooth((f-.12)/.32)*(1-smooth((f-.70)/.30));
+ const sill=.051+.052*diffuser, roof=sill+arch*(.131-.074*throat+.168*diffuser);
+ return {width,roof,top:roof+.035+.018*(1-arch),core:.56*width};
+}
+function buildFloor(){
+ const x0=-1.26,x1=2.37;
+ function skin(u,v,upper){
+  const x=mix(x0,x1,u),z=(2*v-1)*floorSection(x,0).width,f=floorSection(x,z);
+  return [x,upper?f.top:f.roof,z];
+ }
+ for(const upper of [false,true])surface(58,36,(u,v)=>skin(u,v,upper),carbon,1,4,upper?-1:1);
+ for(const s of [0,1]){
+  surface(58,1,(u,v)=>{let p=skin(u,s,false);p[1]=mix(p[1],skin(u,s,true)[1],v);return p},navy,1,4,s?1:-1);
+  surface(1,36,(u,v)=>{let p=skin(s,v,false);p[1]=mix(p[1],skin(s,v,true)[1],u);return p},carbon,1,4,s?1:-1);
+ }
+ obstacles.push({type:"floor",x0,x1});
+ loft([[x0,.053,.012,.061,0],[-.95,.044,.013,.078,0],[1.20,.044,.013,.078,0],[x1,.095,.018,.072,0]],rgb("846848"),1,4,.4,false);
+ for(const side of [-1,1]){
+  // Curved inlet fences and divergent diffuser strakes hang from the tunnel roof.
+  for(const [a,b,f0,f1,depth] of [[-1.24,-.65,.24,.30,.055],[-1.22,-.58,.77,.87,.070],[.85,2.36,.24,.31,.077],[1.02,2.36,.77,.89,.095]]){
+   function edge(u,t,face){let x=mix(a,b,u),fraction=mix(f0,f1,u*u*(3-2*u)),z=side*fraction*floorSection(x,0).width+face*.005,roof=floorSection(x,z).roof;
+    return [x,roof+.002-t*depth*(.37+.63*Math.sin(u*PI*.76)),z]}
+   for(const face of [-1,1])surface(24,1,(u,t)=>edge(u,t,face),carbon,1,4,-face);
+   surface(24,1,(u,v)=>edge(u,1,2*v-1),silver,1,4);
+  }
+  const lip=Array.from({length:23},(_,i)=>{const x=mix(-1.22,2.35,i/22),z=side*floorSection(x,0).width;return [x,floorSection(x,z).top,z]});
+  pipe(lip,.007,lime,0);
+ }
+}
+function rearWing(angle){
+ foil(2.08,.674,.553,.428,angle,navy,0,3);
+ const endX=2.08+.428*Math.cos(rad(angle)),endY=.674+.428*Math.sin(rad(angle));
+ foil(endX-.045,endY+.025,.548,.216,angle+11,lime,0,3);
+}
+function buildCar(angle){
+ vertices=[];indices=[];obstacles=[];incidence=angle;
+ const center=rows=>rows.map(r=>[...r,0]);
+ buildFloor();
+ // The monocoque is hollow around the seat. The nose tapers into the front wing pylons.
+ const nose=loft(center([[-2.70,.252,.018,.065],[-2.60,.26,.055,.102],[-2.31,.309,.076,.113],[-1.82,.405,.105,.135],[-1.35,.464,.133,.206],[-.99,.477,.184,.273],[-.61,.462,.206,.304],[-.42,.45,.185,.293]]),lime,0,2,.71);
+ surface(35,8,(u,v)=>{let x=mix(-2.61,-.49,u),p=nose(x,PI/2+(v-.5)*.51);p[1]+=.0025;return p},navy,0,2);
+ surface(20,10,(u,v)=>{let x=mix(-1.61,-1.06,v),p=nose(x,PI/2+(.5-u)*1.2);p[1]+=.004;return p},white,6,2,1,(u,v)=>atlasUV(1,u,v));
+ loft(center([[-.71,.274,.132,.25],[-.32,.266,.143,.306],[.4,.26,.142,.31],[1.22,.251,.122,.221],[1.96,.31,.10,.125]]),navy,0,0,.66);
+ for(let s of [-1,1]){
+  const sidepod=loft([[-.54,.431,.089,.085,.39*s],[-.46,.429,.156,.194,.439*s],[-.28,.44,.177,.225,.466*s],[.04,.425,.174,.241,.472*s],[.52,.377,.147,.235,.432*s],[1.03,.312,.123,.190,.358*s],[1.49,.264,.085,.137,.274*s],[1.70,.244,.044,.058,.22*s]],navy,4,0,.59);
+  printPatch(sidepod,s,-.31,.67,-.30,.69,0);
+  // Upper intake lip and recessed radiator aperture.
+  sphere([-.469,.474,s*.472],[.041,.087,.162],black,1);
+  rod([-.485,.551,s*.321],[-.465,.551,s*.615],.012,lime,0);
+  const rim=loft([[-.63,.53,.115,.091,s*.236],[-.38,.51,.123,.082,s*.277],[.08,.499,.098,.078,s*.286],[.37,.52,.105,.079,s*.252],[.55,.531,.113,.099,s*.198]],navy,0,0,.8);
+  pipe([[-.59,.631,s*.24],[-.34,.635,s*.274],[-.05,.61,s*.281],[.24,.602,s*.263],[.46,.638,s*.222]],.012,light,0);
+  for(let j=0;j<7;j++){let xx=.24+j*.068,a=.97;let path=Array.from({length:5},(_,i)=>{let p=sidepod(xx+i*.016,s>0?a+i*.115:PI-a-i*.115);p[1]+=.004;return p});pipe(path,.010,black,1)}
+  rod([-.66,.57,s*.27],[-.52,.676,s*.48],.014,carbon);sphere([-.50,.69,s*.485],[.081,.043,.051],lime,0);
+ }
+ // Seat, driver and halo with three chassis attachment points.
+ sphere([.035,.408,0],[.345,.102,.203],black,1);
+ sphere([.17,.593,0],[.157,.178,.147],light,0);
+ obstacles.push({type:"ellipsoid",center:[.17,.593,0],radii:[.157,.178,.147]});
+ surface(35,10,(u,v)=>{let a=mix(PI*.51,PI*1.49,u),b=mix(.005,.43,v);return [.17+.159*Math.cos(a)*Math.cos(b),.594+.180*Math.sin(b),.149*Math.sin(a)*Math.cos(b)]},rgb("1e4356"),5,0,-1);
+ rod([-.28,.47,0],[-.28,.548,0],.012,silver,3);rod([-.271,.548,-.102],[-.271,.548,.102],.021,black);
+ for(let s of [-1,1]){let path=[[-.575,.616,0],[-.48,.812,0],[-.371,.832,s*.142],[-.17,.833,s*.24],[.078,.81,s*.264],[.291,.771,s*.226],[.445,.622,s*.172]];pipe(path,s>0?.024:.024,carbon,3)}
+ const cover=loft(center([[.307,.567,.097,.15],[.422,.608,.189,.235],[.55,.626,.26,.239],[.73,.614,.29,.221],[.93,.544,.249,.213],[1.29,.439,.175,.19],[1.71,.368,.13,.134],[2.08,.334,.084,.09],[2.22,.319,.042,.05]]),lime,0,0,.86);
+ loft(center([[.4,.836,.072,.092],[.51,.843,.114,.125],[.70,.829,.107,.12],[.91,.72,.085,.105],[1.02,.68,.05,.09]]),lime,0,0,.68);
+ sphere([.400,.838,0],[.009,.056,.07],black,1);plate([[.63,.942],[.78,.911],[1.77,.59],[1.93,.523],[1.88,.44],[.76,.726]],0,.017,navy,0);
+ rod([.58,.937,0],[.58,.995,0],.017,carbon);rod([.58,.997,-.093],[.58,.997,.093],.025,light,0);
+ for(let s of [-1,1])printPatch(cover,s,.76,1.43,-.05,.67,3);
+ // Split front-wing elements, endplates and front/rear suspension.
+ foil(-2.75,.096,.978,.345,5,carbon,1,3,.76);foil(-2.477,.145,.966,.185,11,navy,0,3,.78);foil(-2.318,.193,.952,.155,15,lime,0,3,.83);
+ for(let s of [-1,1]){
+  plate([[-2.68,.085],[-2.65,.18],[-2.47,.255],[-2.16,.315],[-2.07,.287],[-2.11,.112],[-2.38,.074]],s*.963,.025,navy);
+  pipe([[-2.647,.184,s*.977],[-2.47,.255,s*.977],[-2.16,.315,s*.977]],.008,lime,0);
+  rod([-2.56,.235,s*.073],[-2.60,.115,s*.122],.021,carbon);
+  for(let [x,zw,hw] of [[-1.57,.815,.151],[1.91,.815,.18]]){
+   wheel(x,s*zw,hw);let hub=[x,.368,s*(zw-.062)];
+   for(let [dx,h,outer] of [[-.43,.43,.396],[.40,.45,.411],[-.34,.185,.289],[.41,.17,.291]])rod([x+dx,h,s*.185],[x,outer,s*(zw-.10)],.018,carbon,1,.014);
+   rod([x+.17,.521,s*.239],[x-.035,.30,s*(zw-.105)],.021,silver,3,.012);
+   rod([x-.32,.337,s*.206],[x-.04,.355,s*(zw-.10)],.012,carbon,1);
+   sphere([x,.354,s*(zw-.168)],[.114,.122,.036],carbon,1);
+  }
+  rod([1.97,.31,s*.075],[2.34,.744,s*.142],.029,carbon,1);
+  plate([[2.038,.651],[2.11,.728],[2.58,.889],[2.736,.902],[2.738,.667],[2.49,.553],[2.25,.522]],s*.553,.024,navy,0,3);
+  pipe([[2.045,.655,s*.566],[2.114,.731,s*.566],[2.58,.889,s*.566],[2.73,.904,s*.566]],.009,lime,0);
+ }
+ foil(2.084,.397,.42,.242,14,carbon,1,3);
+ rod([2.04,.351,0],[2.36,.351,0],.044,silver,3);sphere([2.365,.351,0],[.003,.034,.034],black,1);
+ plate([[2.13,.175],[2.36,.19],[2.37,.282],[2.17,.255]],0,.077,black);sphere([2.373,.238,0],[.009,.028,.028],rgb("fb6854"),0);
+ wingVertexOffset=vertices.length;wingObstacleOffset=obstacles.length;rearWing(angle);
+}
+// Cell-centred disturbance potential with impermeable voxel faces and a slip ground.
+// Run independently of WebGL so camera interaction does not wait on relaxation.
+function flowWorker(){
+ self.onmessage=({data})=>{
+  const {shapes,beta}=data,H=.105,NX=111,NY=25,NZ=53,X=-5.775,Y=H/2,Z=-2.73,S=NX*NY,N=S*NZ;
+  const solid=new Uint8Array(N),phi=new Float32Array(N),ux=new Float32Array(N),uy=new Float32Array(N),uz=new Float32Array(N);
+  const U=Math.cos(beta),W=Math.sin(beta),idx=(i,j,k)=>i+NX*j+S*k;
+  // Voxelise each solid inside its bounding box. The wing skins receive a half-cell
+  // numerical thickness so their impermeable faces survive spatial discretisation.
+  for(const o of shapes){
+   let bounds,inside;
+   if(o.type==="floor"){
+    bounds=[o.x0,o.x1,0,.4,-.82,.82];
+    inside=(x,y,z)=>{const f=floorSection(x,z);return Math.abs(z)<=f.width&&y>=f.roof&&y<=f.top+.028};
+   }else if(o.type==="loft"){
+    const a=o.sections,maxZ=Math.max(...a.map(q=>Math.abs(q[3])+q[2])),maxY=Math.max(...a.map(q=>q[0]+q[1]));
+    bounds=[o.x0,o.x0+o.len,0,maxY,-maxZ,maxZ];
+    inside=(x,y,z)=>{const f=Math.max(0,Math.min(a.length-1.00001,(x-o.x0)/o.len*(a.length-1))),i=f|0,t=f-i,q=a[i],r=a[i+1],l=m=>q[m]+(r[m]-q[m])*t;
+     return Math.abs((y-l(0))/Math.max(.047,l(1)))**(2/o.power)+Math.abs((z-l(3))/Math.max(.018,l(2)))**(2/o.power)<=1};
+   }else if(o.type==="ellipsoid"){
+    const [cx,cy,cz]=o.center,[rx,ry,rz]=o.radii;
+    bounds=[cx-rx,cx+rx,cy-ry,cy+ry,cz-rz,cz+rz];
+    inside=(x,y,z)=>((x-cx)/rx)**2+((y-cy)/ry)**2+((z-cz)/rz)**2<=1;
+   }else if(o.type==="wheel"){
+    bounds=[o.x-o.r,o.x+o.r,0,o.cy+o.r,o.z-o.h,o.z+o.h];
+    inside=(x,y,z)=>(x-o.x)**2+(y-o.cy)**2<o.r**2*(1-.06*(Math.abs(z-o.z)/o.h)**6);
+   }else{
+    bounds=[o.x,o.x+o.chord+.16,0,o.y+o.chord+.16,-o.span,o.span];
+    inside=(x,y,z)=>{const s=(z/o.span)**2,c=o.chord*(1-.15*s),t=(x-o.x-.15*o.shape*s)/(c*Math.cos(o.a));if(t<0||t>1)return false;
+     return Math.abs(y-(o.y+.075*o.shape*s+c*t*Math.sin(o.a)-.046*c*Math.sin(Math.PI*t)))<.053};
+   }
+   const [x0,x1,y0,y1,z0,z1]=bounds;
+   for(let k=Math.max(0,Math.ceil((z0-Z)/H));k<=Math.min(NZ-1,Math.floor((z1-Z)/H));k++)
+    for(let j=Math.max(0,Math.ceil((y0-Y)/H));j<=Math.min(NY-1,Math.floor((y1-Y)/H));j++)
+     for(let i=Math.max(0,Math.ceil((x0-X)/H));i<=Math.min(NX-1,Math.floor((x1-X)/H));i++)
+      if(inside(X+i*H,Y+j*H,Z+k*H))solid[idx(i,j,k)]=1;
+  }
+  const flags=new Uint8Array(N),inv=new Float32Array(N),bias=new Float32Array(N);
+  for(let k=1;k<NZ-1;k++)for(let j=0;j<NY-1;j++)for(let i=1;i<NX-1;i++){
+   let q=idx(i,j,k);if(solid[q])continue;
+   let l=1-solid[q-1],r=1-solid[q+1],d=j?1-solid[q-NX]:0,t=1-solid[q+NX],b=1-solid[q-S],f=1-solid[q+S];
+   flags[q]=l|r<<1|d<<2|t<<3|b<<4|f<<5;inv[q]=1/(l+r+d+t+b+f||1);bias[q]=H*((r-l)*U+(f-b)*W);
+  }
+  let sweeps=0;
+  for(;sweeps<150;sweeps++){
+   let change=0;
+   for(let k=1;k<NZ-1;k++)for(let j=0;j<NY-1;j++)for(let i=1,q=idx(1,j,k);i<NX-1;i++,q++){
+    const m=flags[q];if(!m)continue;
+    const sum=(m&1?phi[q-1]:0)+(m&2?phi[q+1]:0)+(m&4?phi[q-NX]:0)+(m&8?phi[q+NX]:0)+(m&16?phi[q-S]:0)+(m&32?phi[q+S]:0);
+    const dp=1.76*((sum+bias[q])*inv[q]-phi[q]);phi[q]+=dp;if(Math.abs(dp)>change)change=Math.abs(dp);
+   }
+   if(sweeps>24&&change<.00009)break;
+  }
+  for(let k=0;k<NZ;k++)for(let j=0;j<NY;j++)for(let i=0;i<NX;i++){
+   let q=idx(i,j,k),m=flags[q];if(solid[q])continue;if(!m){ux[q]=U;uz[q]=W;continue}
+   const val=phi[q];let vx=.5*((m&1?U+(val-phi[q-1])/H:0)+(m&2?U+(phi[q+1]-val)/H:0)),vy=.5*((m&4?(val-phi[q-NX])/H:0)+(m&8?(phi[q+NX]-val)/H:0)),vz=.5*((m&16?W+(val-phi[q-S])/H:0)+(m&32?W+(phi[q+S]-val)/H:0));
+   const x=X+i*H,y=Y+j*H,z=Z+k*H;
+   for(const axle of [-1.57,1.91]){let dx=x-axle-.24;if(dx<=0)continue;
+    for(const side of [-1,1]){let dz=z-side*.815-Math.tan(beta)*dx,dy=y-.38,w=.17+.09*dx,deficit=.38*(1-Math.exp(-7*dx))*Math.exp(-dx/1.65-dz*dz/(w*w)-dy*dy/(.085+.04*dx));vx*=1-deficit}
+   }
+   if(x>2.42){const dx=x-2.42;for(let side of [-1,1]){let dz=z-side*.55-dx*Math.tan(beta),dy=y-.79-.035*dx,r2=dz*dz+dy*dy,f=side*.025*(1-Math.exp(-8*dx))*Math.exp(-dx/3-r2/.35)/(r2+.018);vy-=f*dz;vz+=f*dy}}
+   ux[q]=vx;uy[q]=vy;uz[q]=vz;
+  }
+  // Reduced-order flow inside the sub-cell passages. A streamfunction gives
+  // opposite-sense circulation with zero through-wall flow in passage coordinates.
+  function tunnelVelocity(p,base){
+   const [x,y,z]=p;
+   if(x< -1.26||x>3.25||y<0||y>.34||Math.abs(z)>.82)return base;
+   const f=floorSection(x,z),fraction=Math.abs(z)/f.width;
+   if(fraction<.16||fraction>.94||y>=f.roof)return base;
+   const side=Math.sign(z),eta=y/f.roof,d=(Math.abs(z)-f.core)/.095;
+   const envelope=Math.exp(-d*d),amplitude=.023*(1+.16*side*Math.sin(beta)/.208);
+   const lateral=-side*amplitude*Math.PI/f.roof*Math.cos(Math.PI*eta)*envelope;
+   const vertical=-2*amplitude*d/.095*Math.sin(Math.PI*eta)*envelope;
+   const axial=U*Math.min(1.75,Math.max(.82,.19/f.roof));
+   const ahead=floorSection(x+.005,z),slope=(ahead.roof-f.roof)/.005;
+   const spread=(ahead.width-f.width)/.005*z/f.width;
+   const vz=lateral+axial*spread;
+   const dzSlope=(floorSection(x,z+.001).roof-floorSection(x,z-.001).roof)/.002;
+   const vy=vertical+eta*(axial*slope+vz*dzSlope);
+   const weight=Math.min(1,(x+1.26)/.20,(3.25-x)/.88,(fraction-.16)/.12,(.94-fraction)/.12);
+   return [axial,vy,vz].map((v,i)=>base[i]+weight*(v-base[i]));
+  }
+  const cap=(v,n)=>Math.max(0,Math.min(n-1.00001,v));
+  function sample(p){
+   let a=cap((p[0]-X)/H,NX),b=cap((p[1]-Y)/H,NY),c=cap((p[2]-Z)/H,NZ),i=a|0,j=b|0,k=c|0;a-=i;b-=j;c-=k;let v=[0,0,0];
+   for(let dk=0;dk<2;dk++)for(let dj=0;dj<2;dj++)for(let di=0;di<2;di++){let w=(di?a:1-a)*(dj?b:1-b)*(dk?c:1-c),q=idx(i+di,j+dj,k+dk);v[0]+=w*ux[q];v[1]+=w*uy[q];v[2]+=w*uz[q]}return tunnelVelocity(p,v);
+  }
+  const paths=[],stream=(sy,sz,seed,start=X+.06,undertray=false)=>{
+   let p=[start,sy,undertray?sz:sz-(5.5*Math.tan(beta))],clock=seed*1.37;
+   for(let n=0;n<(undertray?440:225);n++){
+    let v=sample(p),sp=Math.hypot(...v);if(sp<.12)break;
+    let dt=(undertray?.019:.083)/sp,mid=p.map((a,i)=>a+.5*dt*v[i]),v2=sample(mid),next=p.map((a,i)=>a+dt*v2[i]);
+    if(next[0]>X+(NX-1)*H||Math.abs(next[2])>2.71||next[1]>2.52||next[1]<.015)break;
+    let q=idx(Math.round((next[0]-X)/H),Math.max(0,Math.round((next[1]-Y)/H)),Math.round((next[2]-Z)/H));
+    if(next[0]>=-1.26&&next[0]<=2.37){
+     const floor=floorSection(next[0],next[2]),inSpan=Math.abs(next[2])<=floor.width;
+     if(inSpan&&next[1]>=floor.roof&&next[1]<=floor.top)break;
+     if(solid[q]&&!(inSpan&&Math.abs(next[2])<.65&&Math.abs(next[2])>.13&&next[1]<floor.roof))break;
+    }else if(solid[q])break;
+    paths.push(...p,clock,sp,seed,...next,clock+dt,Math.hypot(...v2),seed);p=next;clock+=dt;
+   }
+  };
+  // A sparse smoke rake keeps the silhouette readable while sampling wheel and floor wakes.
+  let seed=0;for(let k=-5;k<=5;k++)for(let j=0;j<3;j++){
+   let z=k*.266+.024*Math.sin(k*7+j*3),y=[.135,.425,.76][j]+.038*Math.cos(k*2+j);
+   stream(y,z,++seed)
+  }
+  for(let k=-3;k<=3;k++)stream(1.05+.024*Math.sin(k),k*.335,++seed);
+  const outerSegments=paths.length/12;
+  const injection=-1.06,core=floorSection(injection,0).core;
+  for(const side of [-1,1])for(let j=0;j<4;j++){const phase=j*Math.PI/2,z=side*(core+.046*Math.cos(phase)),height=floorSection(injection,z).roof;
+   stream(height*(.5+.23*Math.sin(phase)),z,++seed,injection,true)}
+  const field=new Uint8Array(N*4);for(let q=0;q<N;q++){
+   const pos=[X+(q%NX)*H,Y+(Math.floor(q/NX)%NY)*H,Z+Math.floor(q/S)*H];
+   const v=tunnelVelocity(pos,[ux[q],uy[q],uz[q]]);
+   field[4*q]=Math.min(255,Math.round(Math.hypot(...v)*100));field[4*q+3]=solid[q]?0:255}
+  const ribbons=new Float32Array(paths.length/12*6*11);
+  let out=0;
+  for(let i=0;i<paths.length;i+=12){
+   for(const [end,side] of [[0,-1],[0,1],[1,-1],[1,-1],[0,1],[1,1]]){
+    const a=i+6*end,b=i+6*(1-end);
+    ribbons.set([paths[a],paths[a+1],paths[a+2],paths[b],paths[b+1],paths[b+2],paths[a+3],paths[a+4],paths[a+5],side,end? -1:1],out);out+=11;
+   }
+  }
+  self.postMessage({field,ribbons,outerCount:6*outerSegments,NX,NY,NZ,H,X,Y,Z,sweeps},[field.buffer,ribbons.buffer]);
+ };
+}
+function makeAtlas(){
+ const carNumber="22";
+ const c=document.createElement("canvas");c.width=1024;c.height=512;const g=c.getContext("2d");g.textAlign="center";g.textBaseline="middle";
+ g.fillStyle="#e7efec";g.font="bold 74px Bahnschrift, Avenir Next, Trebuchet MS, sans-serif";g.fillText("GROUNDLINE",582,58,620);g.font="bold 21px sans-serif";g.fillText("A E R O D Y N A M I C S",582,110);
+ g.fillStyle="#ceef4b";for(let j=0;j<3;j++){let x=190+j*29;g.beginPath();g.moveTo(x,22);g.lineTo(x+20,22);g.lineTo(x-15,82);g.lineTo(x-35,82);g.fill()}
+ g.fillStyle="#f5f6e9";g.font="italic 900 125px Arial";g.fillText(carNumber,512,197);
+ g.fillStyle="#e1ca7f";g.font="italic bold 94px Arial";g.fillText("T R A X E N",512,324);
+ g.fillStyle="#182a36";g.font="italic 900 118px Arial";g.fillText(carNumber,500,444);
+ return c;
+}
+const canvas=$("scene"),gl=canvas.getContext("webgl",{alpha:true,antialias:true,premultipliedAlpha:false,powerPreference:"high-performance"});
+let model,ground,traces,vbo,ibo,lineBuffer,planeBuffer,elementType,indexCount=0,lineCount=0,fieldTexture,atlasTexture,fieldReady=false,grid=[111,25,53],origin=[-5.775,.0525,-2.73],spacing=.105,worker,job=0,timer,workerURL;
+let yaw=0,speed=60,angle=18,heat=false,showStreams=true,running=!matchMedia("(prefers-reduced-motion: reduce)").matches,phase=0;
+const defaultCamera={az:-.54,el:.34,zoom:1};let camera={...defaultCamera},lastStamp=0,quality=Math.min(devicePixelRatio||1,1.65),slowFrames=0;
+function program(vs,fs){
+ const compile=(type,src)=>{const s=gl.createShader(type);gl.shaderSource(s,src);gl.compileShader(s);if(!gl.getShaderParameter(s,gl.COMPILE_STATUS))throw Error(gl.getShaderInfoLog(s));return s};
+ let p=gl.createProgram();gl.attachShader(p,compile(gl.VERTEX_SHADER,vs));gl.attachShader(p,compile(gl.FRAGMENT_SHADER,fs));gl.linkProgram(p);if(!gl.getProgramParameter(p,gl.LINK_STATUS))throw Error(gl.getProgramInfoLog(p));
+ const attrs={},uniforms={};for(let i=0;i<gl.getProgramParameter(p,gl.ACTIVE_ATTRIBUTES);i++){let n=gl.getActiveAttrib(p,i).name;attrs[n]=gl.getAttribLocation(p,n)}for(let i=0;i<gl.getProgramParameter(p,gl.ACTIVE_UNIFORMS);i++){let n=gl.getActiveUniform(p,i).name;uniforms[n]=gl.getUniformLocation(p,n)}return {p,a:attrs,u:uniforms}
+}
+function initGL(){
+ model=program(`attribute vec3 pos,normal,color;attribute float mat,zone;attribute vec2 uv;uniform mat4 vp;varying vec3 P,N,C;varying vec2 T;varying float M,G;
+ void main(){P=pos;N=normal;C=color;M=mat;G=zone;T=uv;gl_Position=vp*vec4(pos,1.);}`,
+ `precision highp float;varying vec3 P,N,C;varying vec2 T;varying float M,G;uniform vec3 eye,wind,grid,origin;uniform float heat,ready,h,angle;uniform sampler2D atlas,field;
+ vec2 fetchSpeed(vec3 q){vec2 uv=vec2((q.x+.5)/grid.x,(q.y+q.z*grid.y+.5)/(grid.y*grid.z));vec4 t=texture2D(field,uv);return vec2(t.r*2.55,t.a);}
+ float localSpeed(vec3 pos){vec3 a=clamp((pos-origin)/h,vec3(0.),grid-1.001),i=floor(a),f=fract(a);vec2 sum=vec2(0.);for(int z=0;z<2;z++){for(int y=0;y<2;y++){for(int x=0;x<2;x++){vec3 o=vec3(float(x),float(y),float(z)),w=mix(1.-f,f,o);vec2 v=fetchSpeed(i+o);sum+=vec2(v.x*v.y,v.y)*w.x*w.y*w.z;}}}return sum.y>.01?sum.x/sum.y:1.;}
+ vec3 palette(float cp){float t=clamp((cp+2.)/3.,0.,1.);vec3 a=vec3(.20,.21,.74),b=vec3(.12,.57,.91),c=vec3(.20,.84,.75),d=vec3(.96,.89,.36),e=vec3(.95,.25,.15);return t<.25?mix(a,b,t*4.):t<.5?mix(b,c,(t-.25)*4.):t<.75?mix(c,d,(t-.5)*4.):mix(d,e,(t-.75)*4.);}
+ void main(){vec3 n=normalize(N),v=normalize(eye-P),base=C;float metal=.34,gloss=45.;if(M>5.5){vec4 decal=texture2D(atlas,T);if(decal.a<.5||(heat>.5&&ready>.5))discard;base=decal.rgb;}
+ if(heat>.5&&ready>.5){float u=localSpeed(P+n*.106),imp=max(0.,-dot(n,wind));float cp=clamp(1.-u*u,-2.,1.);cp=mix(cp,1.,.82*pow(imp,2.4));
+ if(G>2.5&&G<3.5){float load=P.x>1.5?.48+angle*.020:.64;cp+=n.y*load*(.57+.55*sin(3.14159*clamp(T.x,0.,1.)));}
+ if(G>3.5)cp-=max(0.,-n.y)*1.30*(1.-smoothstep(1.1,2.4,P.x)*.65);
+ gl_FragColor=vec4(palette(cp)*(.90+.10*max(0.,dot(n,normalize(vec3(-.4,.8,.5))))),1.);return;}
+ if(M>.5&&M<1.5){base*=.95+.05*sin(P.x*520.+P.z*420.)*sin(P.y*510.-P.z*410.);metal=.20;gloss=35.;}
+ if(M>1.5&&M<2.5){base*=.97+.025*sin(P.z*1900.);metal=.115;gloss=14.;}
+ if(M>2.5&&M<3.5){metal=.78;gloss=68.;}
+ if(M>3.5&&M<4.5){float flank=abs(P.z);float mark=P.y-(.357+.067*P.x+.031*sin(P.x*3.));if(flank>.41){base=mix(base,vec3(.18,.32,.38),smoothstep(-.012,.015,mark));float stripe=1.-smoothstep(.010,.016,abs(mark+.003));base=mix(base,vec3(.72,.91,.18),stripe);}}
+ if(M>4.5&&M<5.5){metal=.95;gloss=105.;}
+ vec3 l=normalize(vec3(-.43,.92,.53)),l2=normalize(vec3(.55,.52,-.72)),r=reflect(-v,n);
+ float sky=.5+.5*n.y,diff=.37+.34*sky+.42*max(dot(n,l),0.)+.13*max(dot(n,l2),0.);
+ // Oblique inspection light reveals the floor curvature from the underside camera.
+ diff+=(1.-smoothstep(-1.,.15,eye.y))*.68*max(dot(n,normalize(vec3(-.36,-.67,.64))),0.);
+ float spec=pow(max(dot(n,normalize(l+v)),0.),gloss)+.70*pow(max(dot(n,normalize(l2+v)),0.),gloss*.57);
+ float band=exp(-pow((r.y-.48-r.x*.16)/.14,2.))*.39+exp(-pow((r.y-.82+r.z*.12)/.08,2.))*.32;
+ float fres=.10+.90*pow(1.-clamp(dot(n,v),0.,1.),4.);float oc=mix(.80,1.,smoothstep(.045,.35,P.y));
+ vec3 lit=base*diff*oc+vec3(.86,.93,1.)*metal*(spec*.64+band*(.34+fres*.9)+.15*fres*sky);gl_FragColor=vec4(lit,1.);}`);
+ ground=program(`attribute vec3 pos;uniform mat4 vp;varying vec3 P;void main(){P=pos;gl_Position=vp*vec4(pos,1.);}`,
+ `precision highp float;varying vec3 P;uniform vec3 eye;uniform float pixel;
+ float gridline(vec2 p,float s,float w){vec2 d=abs(fract(p/s+.5)-.5)*s;return 1.-smoothstep(0.,w,min(d.x,d.y));}
+ float shadow(vec2 p,vec2 c,vec2 r){vec2 d=(p-c)/r;return exp(-dot(d,d)*1.55);}
+ void main(){vec2 p=P.xz;float dist=length(eye-P);float fog=exp(-dot(p*vec2(.063,.085),p*vec2(.063,.085)));float w=clamp(dist*pixel,.004,.05);
+ float minor=gridline(p,.25,w)*.058,major=gridline(p,1.,w*1.25)*.095;
+ vec3 base=mix(vec3(.081,.124,.157),vec3(.184,.245,.266),exp(-length(p-vec2(.3,-.6))*.145));
+ float sh=shadow(p,vec2(.18,-.12),vec2(3.1,.95))*.69;
+ for(int i=0;i<2;i++){for(int j=0;j<2;j++){vec2 c=vec2(i==0?-1.57:1.91,j==0?-.815:.815);sh=max(sh,.79*shadow(p,c+vec2(.045,-.035),vec2(.42,.245)));sh=max(sh,.87*shadow(p,c,vec2(.24,.14)));}}
+ sh=max(sh,.65*shadow(p,vec2(-2.38,.0),vec2(.45,1.05)));base*=1.-sh*.84;
+ base+=vec3(.56,.75,.79)*(minor+major)*fog*(1.-sh);gl_FragColor=vec4(base,clamp(fog*1.43,0.,1.));}`);
+ traces=program(`attribute vec3 pos,other;attribute float travel,velocity,seed;attribute vec2 edge;
+ uniform mat4 vp;uniform vec2 screenSize;uniform float strand;
+ varying float t,s,k,across;varying vec3 P;
+ void main(){
+  vec4 a=vp*vec4(pos,1.),b=vp*vec4(other,1.);
+  vec2 delta=(b.xy/max(.01,b.w)-a.xy/max(.01,a.w))*screenSize*edge.y;
+  vec2 normal=vec2(-delta.y,delta.x)/max(.0001,length(delta));
+  a.xy+=normal*edge.x*mix(2.75,3.4,strand)*a.w/screenSize;
+  gl_Position=a;across=edge.x;t=travel;s=velocity;k=seed;P=pos;
+ }`,
+ `precision highp float;varying float t,s,k,across;varying vec3 P;uniform float phase,heat,strand;
+ void main(){float v=clamp((s-.4)/1.2,0.,1.);vec3 c=v<.5?mix(vec3(.30,.39,.72),vec3(.30,.69,.81),v*2.):v<.75?mix(vec3(.30,.69,.81),vec3(.45,.89,.81),(v-.5)*4.):mix(vec3(.45,.89,.81),vec3(.86,.94,.60),(v-.75)*4.);
+ float cycle=fract((t-phase)/1.64),pulse=exp(-cycle*cycle*75.);float fade=(1.-smoothstep(3.25,5.68,abs(P.x)))*(.85+.15*sin(k*12.5));
+ c=mix(c,vec3(1.,.66,.22),strand);float coverage=1.-smoothstep(.48,1.,abs(across));
+ gl_FragColor=vec4(mix(c,vec3(.94,.99,.97),pulse*.63),(.49+.48*pulse)*coverage*fade*(1.-.29*heat));}`);
+ vbo=gl.createBuffer();ibo=gl.createBuffer();lineBuffer=gl.createBuffer();planeBuffer=gl.createBuffer();
+ gl.bindBuffer(gl.ARRAY_BUFFER,planeBuffer);gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-65,-.003,-65,65,-.003,-65,-65,-.003,65,65,-.003,65]),gl.STATIC_DRAW);
+ function texture(unit){let tex=gl.createTexture();gl.activeTexture(gl.TEXTURE0+unit);gl.bindTexture(gl.TEXTURE_2D,tex);for(let p of [gl.TEXTURE_WRAP_S,gl.TEXTURE_WRAP_T])gl.texParameteri(gl.TEXTURE_2D,p,gl.CLAMP_TO_EDGE);return tex}
+ atlasTexture=texture(0);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,true);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,makeAtlas());gl.generateMipmap(gl.TEXTURE_2D);gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR_MIPMAP_LINEAR);
+ fieldTexture=texture(1);gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);for(let p of [gl.TEXTURE_MAG_FILTER,gl.TEXTURE_MIN_FILTER])gl.texParameteri(gl.TEXTURE_2D,p,gl.NEAREST);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,1,1,0,gl.RGBA,gl.UNSIGNED_BYTE,new Uint8Array([100,0,0,255]));
+ gl.clearColor(0,0,0,0);gl.enable(gl.DEPTH_TEST);gl.depthFunc(gl.LEQUAL);gl.enable(gl.BLEND);gl.blendFunc(gl.SRC_ALPHA,gl.ONE_MINUS_SRC_ALPHA);
+}
+function uploadCar(){
+ buildCar(angle);gl.bindBuffer(gl.ARRAY_BUFFER,vbo);gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);
+ if(vertices.length/13<65536){elementType=gl.UNSIGNED_SHORT;gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint16Array(indices),gl.STATIC_DRAW)}
+ else if(gl.getExtension("OES_element_index_uint")){elementType=gl.UNSIGNED_INT;gl.bufferData(gl.ELEMENT_ARRAY_BUFFER,new Uint32Array(indices),gl.STATIC_DRAW)}
+ else{const expanded=new Float32Array(indices.length*13);indices.forEach((index,i)=>{for(let j=0;j<13;j++)expanded[13*i+j]=vertices[13*index+j]});vertices=expanded;elementType=0}
+ gl.bufferData(gl.ARRAY_BUFFER,new Float32Array(vertices),gl.STATIC_DRAW);indexCount=indices.length;vertices=[];indices=[];
+}
+let outerCount=0;
+function solve(){
+ const version=++job;if(worker)worker.terminate();$("solverStatus").textContent="Updating flow field";fieldReady=false;lineCount=0;
+ workerURL??=URL.createObjectURL(new Blob([floorSection.toString(),"\n(",flowWorker.toString(),")()"],{type:"text/javascript"}));
+ worker=new Worker(workerURL);worker.onmessage=({data:d})=>{if(version!==job)return;
+  gl.activeTexture(gl.TEXTURE1);gl.bindTexture(gl.TEXTURE_2D,fieldTexture);gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,d.NX,d.NY*d.NZ,0,gl.RGBA,gl.UNSIGNED_BYTE,d.field);
+  grid=[d.NX,d.NY,d.NZ];origin=[d.X,d.Y,d.Z];spacing=d.H;
+  gl.bindBuffer(gl.ARRAY_BUFFER,lineBuffer);gl.bufferData(gl.ARRAY_BUFFER,d.ribbons,gl.STATIC_DRAW);lineCount=d.ribbons.length/11;outerCount=d.outerCount;fieldReady=true;
+  $("solverStatus").textContent="Steady flow field · "+(d.NX*d.NY*d.NZ).toLocaleString("en-US")+" cells";worker.terminate();worker=null;
+ };worker.onerror=()=>{$("solverStatus").textContent="Flow solver unavailable · reload to retry"};worker.postMessage({shapes:obstacles,beta:rad(yaw)});
+}
+// Incidence changes only the last two foils. Their vertex layout and indices stay fixed.
+function updateWing(){
+ if(!elementType){uploadCar();return}
+ obstacles.length=wingObstacleOffset;
+ rearWing(angle);
+ gl.bindBuffer(gl.ARRAY_BUFFER,vbo);
+ gl.bufferSubData(gl.ARRAY_BUFFER,wingVertexOffset*Float32Array.BYTES_PER_ELEMENT,new Float32Array(vertices));
+ vertices=[];indices=[];incidence=angle;
+}
+function viewProjection(eye,target,aspect,fov){
+ let z=unit(sub(eye,target)),x=unit(cross([0,1,0],z)),y=cross(z,x),f=1/Math.tan(fov/2),a=(100+.05)/(.05-100),b=2*100*.05/(.05-100);
+ return new Float32Array([f*x[0]/aspect,f*y[0],a*z[0],-z[0],f*x[1]/aspect,f*y[1],a*z[1],-z[1],f*x[2]/aspect,f*y[2],a*z[2],-z[2],-dot(x,eye)*f/aspect,-dot(y,eye)*f,-a*dot(z,eye)+b,dot(z,eye)]);
+}
+let enabled=[];
+function bind(prog,buf,layout,stride){gl.useProgram(prog.p);for(let a of enabled)gl.disableVertexAttribArray(a);enabled=[];gl.bindBuffer(gl.ARRAY_BUFFER,buf);for(let [name,size,off] of layout){const a=prog.a[name];gl.enableVertexAttribArray(a);gl.vertexAttribPointer(a,size,gl.FLOAT,false,stride*4,off*4);enabled.push(a)}}
+const aeroTopics = [
+ {
+  label:"Front wing",
+  anchor:side=>[-2.36,.249,side*.74],
+  direction:[-1,-1],
+  explanation:"The stacked, inverted wing elements create a pressure difference that pushes the front of the car down. Their shape and endplates also steer the flow that reaches the front tyres and floor.",
+  experiment:"Choose Front view and turn on Pressure map to compare the wing with the nose.",
+  source:"https://www.mercedesamgf1.com/news/feature-downforce-in-formula-one-explained"
+ },
+ {
+  label:"Tyre wake",
+  anchor:side=>[-1.10,.41,side*.83],
+  direction:[0,1],
+  explanation:"The front tyre leaves a region of slower, disturbed air behind it. If that wake gets drawn into the floor inlet, it can reduce the downforce the floor produces.",
+  experiment:"In Top view, enable Streamlines and change Yaw angle to see the wake shift sideways.",
+  source:"https://saemobilus.sae.org/articles/aerodynamic-characteristics-a-fully-deformable-formula-one-wind-tunnel-tyre-2012-01-1166"
+ },
+ {
+  label:"Floor tunnels",
+  anchor:(side,below)=>{
+   const x=.18,z=side*(below?.45:.79),floor=floorSection(x,z);
+   return [x,below?floor.roof-.017:floor.top+.012,z];
+  },
+  direction:[0,1],
+  explanation:"The floor and the track form two tunnels. Air speeds up in the narrowest part, where lower static pressure helps push the car down. The amber corkscrews illustrate vortices spinning in opposite directions in the two tunnels.",
+  experiment:"Choose Underfloor and enable Undertray tracers to follow the vortices through the tunnels.",
+  source:"https://www.formula1.com/en/latest/article/tech-tuesday-why-new-floors-should-help-enhance-f1s-wheel-to-wheel-action-in.6WEBVH3iEhZhBvgKxTYSij"
+ },
+ {
+  label:"Diffuser",
+  anchor:side=>{
+   const x=2.35,z=side*.38;
+   return [x,floorSection(x,z).roof-.025,z];
+  },
+  direction:[1,1],
+  explanation:"The rear ramp opens up the floor tunnels. Air slows as it expands and its static pressure rises toward the exit, helping sustain low pressure farther forward. A ramp that opens too abruptly can cause the flow to separate.",
+  experiment:"Choose Underfloor and follow the amber tracers to the ramp and its vertical strakes.",
+  source:"https://www.racecar-engineering.com/tech-explained/diffusers-engineering-basics-aerodynamics/"
+ },
+ {
+  label:"Rear wing",
+  anchor:side=>{
+   const a=rad(incidence),flap=rad(incidence+11);
+   return [2.08+.428*Math.cos(a)-.045+.11*Math.cos(flap),.699+.428*Math.sin(a)+.11*Math.sin(flap),side*.31];
+  },
+  direction:[1,-1],
+  explanation:"The inverted rear wing adds load to the rear tyres. A steeper wing usually makes more downforce and drag before stall. Air curling around the tips also forms trailing vortices.",
+  experiment:"Increase Rear wing incidence and compare the Downforce and Drag force estimates in telemetry.",
+  source:"https://motorsport.tech/formula-1/f1-rear-wing-explained"
+ }
+];
+
+const aeroGuide=$("aeroGuide"),aeroDetail=$("aeroDetail"),guideToggle=$("guideToggle");
+const svgNS="http://www.w3.org/2000/svg";
+const aeroPins=aeroTopics.map((topic,index)=>{
+ const button=document.createElement("button"),number=document.createElement("span");
+ button.type="button";button.className="aero-pin glass";
+ button.setAttribute("aria-controls","aeroDetail");button.setAttribute("aria-expanded","false");
+ number.setAttribute("aria-hidden","true");number.textContent=index+1;
+ button.append(number,topic.label);aeroDetail.before(button);
+
+ const leader=document.createElementNS(svgNS,"g"),line=document.createElementNS(svgNS,"line"),dot=document.createElementNS(svgNS,"circle");
+ dot.setAttribute("r","3.25");
+ leader.append(line,dot);$("aeroLeaders").append(leader);
+ const pin={topic,button,leader,line,dot};
+ button.addEventListener("click",()=>selectAeroPin(pin));
+ return pin;
+});
+
+let activeAeroPin=null,focusAeroDetail=false,lastAeroProjection=null,lastAeroIncidence,aeroLayout=null;
+const aeroHud=[...document.querySelectorAll(".identity, .chip, .hud-cluster, .controls, .legend, .telemetry, .footer")];
+const aeroObserver=new ResizeObserver(()=>{aeroLayout=null});
+for(const element of [aeroGuide,...aeroHud])aeroObserver.observe(element);
+
+function closeAeroDetail(restoreFocus=false){
+ if(!activeAeroPin)return;
+ const {button,leader}=activeAeroPin;
+ button.setAttribute("aria-expanded","false");leader.classList.remove("selected");
+ aeroDetail.hidden=true;activeAeroPin=null;focusAeroDetail=false;lastAeroProjection=null;
+ if(restoreFocus)(button.hidden?canvas:button).focus({preventScroll:true});
+}
+
+function selectAeroPin(pin){
+ if(pin===activeAeroPin){closeAeroDetail(true);return}
+ closeAeroDetail();
+ activeAeroPin=pin;pin.button.setAttribute("aria-expanded","true");pin.leader.classList.add("selected");
+ $("aeroTitle").textContent=pin.topic.label;
+ $("aeroExplanation").textContent=pin.topic.explanation;
+ $("aeroTry").textContent=pin.topic.experiment;
+ $("aeroSource").href=pin.topic.source;
+ $("aeroSource").setAttribute("aria-label","Read more about "+pin.topic.label.toLowerCase());
+ aeroDetail.hidden=false;aeroDetail.scrollTop=0;focusAeroDetail=true;lastAeroProjection=null;
+}
+
+function syncAeroGuide(){
+ if(!guideToggle.checked)closeAeroDetail();
+ aeroGuide.hidden=!guideToggle.checked;
+ aeroLayout=null;
+}
+guideToggle.addEventListener("change",()=>{
+ syncAeroGuide();
+ if(!aeroGuide.hidden&&compact.matches){
+  togglePanel($("controlToggle"),controlPanel,false);
+  $("controlToggle").focus({preventScroll:true});
+ }
+});
+$("aeroClose").onclick=()=>closeAeroDetail(true);
+$("tunnel").addEventListener("keydown",event=>{
+ if(event.key!=="Escape"||!activeAeroPin)return;
+ event.preventDefault();
+ closeAeroDetail(aeroDetail.contains(document.activeElement));
+});
+
+function projectAeroPoint([x,y,z],vp,width,height){
+ const depth=vp[3]*x+vp[7]*y+vp[11]*z+vp[15];
+ if(depth<=0)return null;
+ const px=(vp[0]*x+vp[4]*y+vp[8]*z+vp[12])/depth;
+ const py=(vp[1]*x+vp[5]*y+vp[9]*z+vp[13])/depth;
+ if(Math.abs(px)>1||Math.abs(py)>1)return null;
+ const left=(px+1)*width/2,top=(1-py)*height/2;
+ return {left,top,right:left,bottom:top,width:0,height:0};
+}
+
+const aeroDirections=[[0,-1],[0,1],[-1,0],[1,0],[-1,-1],[1,-1],[-1,1],[1,1]];
+function placeAeroBox(origin,width,height,viewportWidth,viewportHeight,occupied,preferred,gaps){
+ let best,bestOverlap=Infinity;
+ for(const gap of gaps)for(const [dx,dy] of [preferred,...aeroDirections]){
+  const x=dx<0?origin.left-width-gap:dx>0?origin.left+origin.width+gap:origin.left+(origin.width-width)/2;
+  const y=dy<0?origin.top-height-gap:dy>0?origin.top+origin.height+gap:origin.top+(origin.height-height)/2;
+  const left=clamp(x,10,viewportWidth-width-10),top=clamp(y,10,viewportHeight-height-10);
+  const right=left+width,bottom=top+height;
+  const overlap=occupied.reduce((sum,rect)=>sum
+   + Math.max(0,Math.min(right,rect.right+5)-Math.max(left,rect.left-5))
+   * Math.max(0,Math.min(bottom,rect.bottom+5)-Math.max(top,rect.top-5)),0);
+  if(overlap>=bestOverlap)continue;
+  best={left,top,right,bottom,width,height};bestOverlap=overlap;
+  if(!overlap)return best;
+ }
+ return best;
+}
+
+function renderAeroGuide(vp,eye,width,height){
+ if(aeroGuide.hidden)return;
+ if(aeroLayout&&lastAeroIncidence===incidence&&lastAeroProjection&&vp.every((value,i)=>value===lastAeroProjection[i]))return;
+ lastAeroIncidence=incidence;lastAeroProjection=vp;
+ if(!aeroLayout){
+  for(const pin of aeroPins)pin.button.hidden=false;
+  const sizes=aeroPins.map(({button})=>[button.offsetWidth,button.offsetHeight]);
+  const obstacles=aeroHud.map(element=>element.getBoundingClientRect()).filter(rect=>rect.width&&rect.height);
+  aeroLayout={sizes,obstacles};
+ }
+ const occupied=[...aeroLayout.obstacles],side=eye[2]<0?-1:1;
+ let selectedBox=null;
+ for(const [i,pin] of aeroPins.entries()){
+  const {topic,button,leader,line,dot}=pin;
+  const point=projectAeroPoint(topic.anchor(side,eye[1]<0),vp,width,height);
+  if(!point&&button===document.activeElement)canvas.focus({preventScroll:true});
+  button.hidden=!point;leader.toggleAttribute("hidden",!point);
+  if(!point)continue;
+  const [pinWidth,pinHeight]=aeroLayout.sizes[i];
+  const box=placeAeroBox(point,pinWidth,pinHeight,width,height,[...occupied,point],topic.direction,[13,35,63,94,135]);
+  occupied.push(box);
+  button.style.transform="translate("+box.left+"px,"+box.top+"px)";
+  line.setAttribute("x1",point.left);line.setAttribute("y1",point.top);
+  line.setAttribute("x2",clamp(point.left,box.left,box.right));line.setAttribute("y2",clamp(point.top,box.top,box.bottom));
+  dot.setAttribute("cx",point.left);dot.setAttribute("cy",point.top);
+  if(pin===activeAeroPin)selectedBox=box;
+ }
+ if(!activeAeroPin)return;
+ if(!selectedBox){closeAeroDetail(aeroDetail.contains(document.activeElement));return}
+ const box=placeAeroBox(selectedBox,aeroDetail.offsetWidth,aeroDetail.offsetHeight,width,height,occupied,[0,-1],[8,23,45,80]);
+ aeroDetail.style.transform="translate("+box.left+"px,"+box.top+"px)";
+ if(focusAeroDetail){aeroDetail.focus({preventScroll:true});focusAeroDetail=false}
+}
+
+function render(stamp){
+ requestAnimationFrame(render);if(document.hidden||gl.isContextLost())return;let dt=lastStamp?Math.min(.05,(stamp-lastStamp)/1000):0;
+ if(lastStamp&&stamp-lastStamp>28)slowFrames++;else slowFrames=Math.max(0,slowFrames-2);
+ if(slowFrames>45&&quality>.8){quality=Math.max(.8,quality*.85);slowFrames=0}lastStamp=stamp;if(running)phase=(phase+dt*speed/32)%1640;
+ const viewWidth=canvas.clientWidth,viewHeight=canvas.clientHeight;
+ const w=Math.max(1,Math.round(viewWidth*quality)),h=Math.max(1,Math.round(viewHeight*quality));if(canvas.width!==w||canvas.height!==h){canvas.width=w;canvas.height=h;gl.viewport(0,0,w,h)}
+ const panelSpace=!compact.matches&&!controlPanel.hidden?Math.min(.32,(controlPanel.offsetWidth+24)/viewWidth):0;
+ let aspect=w/h,fov=rad(32),target=[0,.43,0],dist=Math.max(3.65,6.95/(aspect*(1-panelSpace)))/Math.tan(fov/2)*.5/camera.zoom;
+ const eye=add(target,scale([Math.sin(camera.az)*Math.cos(camera.el),Math.sin(camera.el),Math.cos(camera.az)*Math.cos(camera.el)],dist)),vp=viewProjection(eye,target,aspect,fov);
+ for(let i=0;i<16;i+=4){vp[i]-=panelSpace*vp[i+3];vp[i+1]+=.055*vp[i+3]}
+ renderAeroGuide(vp,eye,viewWidth,viewHeight);
+ gl.depthMask(true);gl.clear(gl.COLOR_BUFFER_BIT|gl.DEPTH_BUFFER_BIT);
+ if(eye[1]>.01){bind(ground,planeBuffer,[["pos",3,0]],3);let u=ground.u;gl.uniformMatrix4fv(u.vp,false,vp);gl.uniform3fv(u.eye,eye);gl.uniform1f(u.pixel,.65/h);gl.drawArrays(gl.TRIANGLE_STRIP,0,4)}
+ bind(model,vbo,[["pos",3,0],["normal",3,3],["color",3,6],["mat",1,9],["uv",2,10],["zone",1,12]],13);
+ let u=model.u;gl.uniformMatrix4fv(u.vp,false,vp);gl.uniform3fv(u.eye,eye);gl.uniform3fv(u.wind,[Math.cos(rad(yaw)),0,Math.sin(rad(yaw))]);gl.uniform3fv(u.grid,grid);gl.uniform3fv(u.origin,origin);gl.uniform1f(u.h,spacing);gl.uniform1f(u.heat,heat?1:0);gl.uniform1f(u.ready,fieldReady?1:0);gl.uniform1f(u.angle,angle);gl.uniform1i(u.atlas,0);gl.uniform1i(u.field,1);
+ if(elementType){gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER,ibo);gl.drawElements(gl.TRIANGLES,indexCount,elementType,0)}else gl.drawArrays(gl.TRIANGLES,0,indexCount);
+ if(lineCount&&(showStreams||$("floorTraces").checked)){
+  bind(traces,lineBuffer,[["pos",3,0],["other",3,3],["travel",1,6],["velocity",1,7],["seed",1,8],["edge",2,9]],11);
+  u=traces.u;gl.uniformMatrix4fv(u.vp,false,vp);gl.uniform2f(u.screenSize,viewWidth,viewHeight);
+  gl.uniform1f(u.phase,phase);gl.uniform1f(u.heat,heat?1:0);gl.depthMask(false);
+  if(showStreams){gl.uniform1f(u.strand,0);gl.drawArrays(gl.TRIANGLES,0,outerCount)}
+  if($("floorTraces").checked){gl.uniform1f(u.strand,1);gl.drawArrays(gl.TRIANGLES,outerCount,lineCount-outerCount)}
+  gl.depthMask(true);
+ }
+}
+function telemetry(){
+ speed=+$("speed").value;yaw=+$("yaw").value;angle=+$("wing").value;
+ for(let el of [$("speed"),$("yaw"),$("wing")])el.style.setProperty("--p",100*(el.value-el.min)/(el.max-el.min)+"%");
+ $("speedOut").innerHTML=speed+' <em>m/s</em>';$("yawOut").textContent=(yaw>0?"+":"")+yaw+"°";$("wingOut").textContent=angle+"°";
+ const beta=rad(yaw),q=.5*1.225*speed*speed,wingLoad=.95*Math.sin(rad(angle+4))/Math.sin(rad(22)),load=(2.17+wingLoad)*Math.cos(beta)**2.3;
+ const cd=.765+.145*wingLoad**2+.95*Math.sin(beta)**2;
+ $("reynolds").textContent=(1.225*speed*5.5/1.81e-5/1e6).toFixed(2);$("cd").textContent=cd.toFixed(3);$("cl").textContent="−"+load.toFixed(2);
+ $("drag").textContent=(q*1.50*cd/1000).toFixed(2);$("force").textContent=(q*1.50*load/1000).toFixed(2);
+}
+function syncVisuals(){
+ heat=$("heat").checked;showStreams=$("streams").checked;
+ $("legendName").textContent=heat?"Pressure coefficient":"Relative air speed";$("legendSymbol").textContent=heat?"Cₚ":"u/U∞";
+ $("legendLow").textContent=heat?"−2.0":"0.4";$("legendMid").textContent=heat?"−0.5":"1.0";$("legendHigh").textContent=heat?"+1.0":"1.6";
+ $("gradient").style.background=heat?"linear-gradient(90deg,#3336bd,#2092e8,#33d6bf,#f5e35c,#f34026)":"";
+ $("scalarLegend").hidden=!(heat||showStreams);$("floorKey").hidden=!$("floorTraces").checked;
+ document.querySelector(".legend").hidden=!(heat||showStreams||$("floorTraces").checked);$("playIcon").setAttribute("href",running?"#pause":"#play-symbol");$("playText").textContent=running?"Pause flow":"Resume flow";
+ $("state").classList.toggle("paused",!running);$("stateText").textContent=running?"Flow running":"Flow paused";
+}
+function refreshField(){
+ if(!gl)return;clearTimeout(timer);++job;if(worker){worker.terminate();worker=null}lineCount=0;fieldReady=false;$("solverStatus").textContent="Updating flow field";
+ timer=setTimeout(()=>{if(incidence!==angle)updateWing();solve()},125);
+}
+for(let id of ["speed","yaw","wing"])$(id).addEventListener("input",()=>{telemetry();if(id!=="speed")refreshField()});
+for(let id of ["streams","heat","floorTraces"])$(id).addEventListener("change",syncVisuals);
+$("play").onclick=()=>{running=!running;syncVisuals()};
+$("notes").onclick=()=>$("dialog").showModal();$("closeNotes").onclick=()=>$("dialog").close();
+$("dialog").onclick=e=>{if(e.target===$("dialog")){const r=$("dialog").getBoundingClientRect();if(e.clientX<r.left||e.clientX>r.right||e.clientY<r.top||e.clientY>r.bottom)$("dialog").close()}};
+const controlPanel=$("controlPanel");
+const compact=matchMedia("(max-width:820px), (max-height:580px)");
+function togglePanel(button,panel,open){panel.hidden=!open;button.setAttribute("aria-expanded",String(open))}
+function panelDefaults(){togglePanel($("controlToggle"),$("controlPanel"),!compact.matches);togglePanel($("teleToggle"),$("readouts"),!compact.matches)}
+panelDefaults();compact.addEventListener("change",panelDefaults);
+const bottomDock=document.querySelector(".hud-bottom");
+new ResizeObserver(([entry])=>{
+ $("tunnel").style.setProperty("--dock-height",entry.contentRect.height+"px");
+}).observe(bottomDock);
+$("controlToggle").onclick=()=>togglePanel($("controlToggle"),$("controlPanel"),$("controlPanel").hidden);
+$("teleToggle").onclick=()=>togglePanel($("teleToggle"),$("readouts"),$("readouts").hidden);
+$("inspectFloor").onclick=()=>{selectCamera("Underfloor");$("floorTraces").checked=true;syncVisuals();if(compact.matches)togglePanel($("controlToggle"),$("controlPanel"),false)};
+const preset={Perspective:[defaultCamera.az,defaultCamera.el],Front:[-PI/2,.07],Side:[0,.07],Top:[0,PI/2-.002],Underfloor:[-.28,-1.05]};
+function selectCamera(name){[camera.az,camera.el]=preset[name];camera.zoom=1;$("viewLabel").textContent=name;$("camera").value=name}
+$("camera").onchange=e=>selectCamera(e.target.value);
+$("resetAll").onclick=()=>{$("speed").value=60;$("yaw").value=0;$("wing").value=18;$("heat").checked=false;$("streams").checked=true;$("floorTraces").checked=true;guideToggle.checked=false;syncAeroGuide();running=!matchMedia("(prefers-reduced-motion: reduce)").matches;phase=0;selectCamera("Perspective");telemetry();syncVisuals();refreshField()};
+$("expandView").hidden=!document.fullscreenEnabled;
+$("expandView").onclick=async()=>{
+ try{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen()}
+ catch{$("expandView").title="Browser fullscreen unavailable"}
+};
+function orbit(dx,dy){camera.az-=dx*.007;camera.el=clamp(camera.el+dy*.007,-1.49,1.568);$("viewLabel").textContent="Orbit";$("camera").selectedIndex=-1}
+function zoom(factor){camera.zoom=clamp(camera.zoom*factor,.62,2.4)}
+const pointers=new Map();
+canvas.addEventListener("pointerdown",e=>{canvas.setPointerCapture(e.pointerId);pointers.set(e.pointerId,[e.clientX,e.clientY]);canvas.focus({preventScroll:true})});
+canvas.addEventListener("pointermove",e=>{if(!pointers.has(e.pointerId))return;const prev=pointers.get(e.pointerId),now=[e.clientX,e.clientY];pointers.set(e.pointerId,now);
+ if(pointers.size===1)orbit(now[0]-prev[0],now[1]-prev[1]);else if(pointers.size===2){let other=[...pointers.entries()].find(([k])=>k!==e.pointerId)[1];zoom(Math.hypot(now[0]-other[0],now[1]-other[1])/Math.max(1,Math.hypot(prev[0]-other[0],prev[1]-other[1])))}});
+for(let ev of ["pointerup","pointercancel","lostpointercapture"])canvas.addEventListener(ev,e=>pointers.delete(e.pointerId));
+canvas.addEventListener("wheel",e=>{e.preventDefault();zoom(Math.exp(-e.deltaY*(e.deltaMode===1?.035:.0012)))},{passive:false});
+canvas.addEventListener("keydown",e=>{let dirs={ArrowLeft:[12,0],ArrowRight:[-12,0],ArrowUp:[0,10],ArrowDown:[0,-10]};if(dirs[e.key])orbit(...dirs[e.key]);else if(["+","=","-"].includes(e.key))zoom(e.key==="-"?.9:1.1);else if(e.key===" "){running=!running;syncVisuals()}else return;e.preventDefault()});
+function unavailable(message){guideToggle.disabled=true;guideToggle.checked=false;syncAeroGuide();let box=document.createElement("div");box.className="fallback glass";box.textContent=message;$("viewport").append(box);$("solverStatus").textContent="3D rendering unavailable"}
+canvas.addEventListener("webglcontextlost",e=>{e.preventDefault();$("solverStatus").textContent="Graphics context interrupted"});canvas.addEventListener("webglcontextrestored",()=>location.reload());
+telemetry();syncVisuals();syncAeroGuide();
+if(gl){try{initGL();uploadCar();solve();requestAnimationFrame(render)}catch(err){console.error(err);unavailable("The renderer could not start. Open this file in a WebGL-enabled browser.")}}
+else unavailable("3D rendering requires WebGL. Enable graphics acceleration in your browser and reopen this file.");
+</script></body></html>
