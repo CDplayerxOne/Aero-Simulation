@@ -1,8 +1,8 @@
 import * as T from '../vendor/three.module.min.js';
 export const circuits=[
- {name:'Sierra Vista',region:'Mountain circuit',length:2250,sky:0x94bfd6,fog:0xb9c4bd,grass:0x807e4b,rock:0x7b7364,trees:0x465b3d,height:11,theme:'alpine',points:[[0,0],[0,150],[50,225],[155,245],[235,195],[235,80],[160,20],[195,-65],[245,-130],[190,-211],[60,-230],[-60,-170],[-90,-85],[-20,-60]]},
- {name:'Copper Canyon',region:'Desert circuit',length:2180,sky:0xe4b78c,fog:0xd5a884,grass:0xba8350,rock:0x985b40,trees:0x68633e,height:20,theme:'desert',points:[[0,0],[0,115],[-70,195],[-30,265],[90,246],[127,155],[200,177],[281,108],[239,31],[281,-74],[215,-169],[72,-182],[48,-95],[3,-75]]},
- {name:'Northwood Park',region:'Forest circuit',length:2320,sky:0xa6c4cc,fog:0xa1b8b6,grass:0x607b4b,rock:0x667567,trees:0x304f3b,height:7,theme:'forest',points:[[0,0],[0,170],[45,235],[185,238],[238,180],[185,110],[140,60],[185,2],[290,12],[337,-86],[245,-193],[89,-213],[72,-114],[10,-80]]}
+ {name:'Sierra Vista',region:'Mountain circuit',length:2110,sky:0x94bfd6,fog:0xb9c4bd,grass:0x807e4b,rock:0x7b7364,trees:0x465b3d,height:11,theme:'alpine',points:[[0,0],[0,150],[50,225],[155,245],[235,195],[235,80],[160,20],[195,-65],[245,-130],[190,-211],[60,-230],[-60,-170],[-90,-85],[-20,-60]]},
+ {name:'Copper Canyon',region:'Desert circuit',length:1750,sky:0xe4b78c,fog:0xd5a884,grass:0xba8350,rock:0x985b40,trees:0x68633e,height:20,theme:'desert',points:[[0,0],[0,115],[-70,195],[-30,265],[90,246],[127,155],[200,177],[281,108],[239,31],[281,-74],[215,-169],[72,-182],[48,-95],[3,-75]]},
+ {name:'Northwood Park',region:'Forest circuit',length:2070,sky:0xa6c4cc,fog:0xa1b8b6,grass:0x607b4b,rock:0x667567,trees:0x304f3b,height:7,theme:'forest',points:[[0,0],[0,170],[45,235],[185,238],[238,180],[185,110],[140,60],[185,2],[290,12],[337,-86],[245,-193],[89,-213],[72,-114],[10,-80]]}
 ];
 export const mod=(x,n)=>(x%n+n)%n;
 export const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));

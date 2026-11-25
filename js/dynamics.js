@@ -16,7 +16,7 @@ export function advance(c,input,track,dt){
  const torque=380+112*Math.sin(Math.PI*clamp((c.rpm-1000)/7400,0,1)),drive=c.shift?0:input.gas*torque*ratios[c.gear]*3.72*.90/.33;
  c.braking=input.brake;c.throttle=input.gas;
  const brake=input.brake*15500,dir=Math.sign(v||1),frontLong=clamp(-dir*brake*.62,-mu*fzF,mu*fzF);
- const rearLong=clamp(drive-dir*brake*.38,-mu*fzR,mu*fzR);
+ const rearLong=clamp(drive-dir*brake*.38,-mu*fzR*.91,mu*fzR*.85);
  const denom=Math.max(4,abs),slipF=c.steer-Math.atan2(c.side+front*c.omega,denom),slipR=-Math.atan2(c.side-rear*c.omega,denom);
  const gripF=Math.sqrt(Math.max(0,(fzF*mu)**2-frontLong**2)),gripR=Math.sqrt(Math.max(0,(fzR*mu)**2-rearLong**2));
  const fyF=gripF*Math.tanh(85000*slipF/Math.max(1,gripF)),fyR=gripR*Math.tanh(94000*slipR/Math.max(1,gripR));
@@ -27,6 +27,10 @@ export function advance(c,input,track,dt){
  c.speed=clamp(v+dt*(c.acc+c.omega*c.side),0,88);
  c.side+=dt*(c.latAcc-c.omega*v);c.omega+=dt*(front*yf-rear*fyR)/1800;
  if(abs<6){const mix=(1-abs/6)*Math.min(1,dt*22);c.omega+=(v*Math.tan(c.steer)/wheelbase-c.omega)*mix;c.side*=1-mix}
+ // Electronic stability control applies a corrective yaw moment as sideslip grows.
+ const yawLimit=mu*gravity/Math.max(5,abs),desiredYaw=clamp(v*Math.tan(c.steer)/wheelbase,-yawLimit,yawLimit);
+ const sideslip=Math.abs(Math.atan2(c.side,denom)),assist=1.6+clamp(sideslip*18,0,8);
+ c.omega+=(desiredYaw-c.omega)*(1-Math.exp(-dt*assist));
  c.heading+=c.omega*dt;const sin=Math.sin(c.heading),cos=Math.cos(c.heading);
  c.x+=dt*(sin*c.speed+cos*c.side);c.z+=dt*(cos*c.speed-sin*c.side);c.wheel+=c.speed*dt/.33;
  const hit=track.locate(c.x,c.z,c.index),limit=track.width+5.7;
