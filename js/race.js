@@ -32,7 +32,7 @@ async function audioToggle(){
 }
 $('sound').onclick=audioToggle;
 function updateAudio(){
- mixer?.update(cars[0],sound && !!cars[0] && mode!=='paused' && !document.hidden);
+ mixer?.update(cars[0],sound && !!cars[0] && mode!=='paused' && !document.hidden,mode);
 }
 function drawMap(canvas,t,list=[],selected=true){
  const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
@@ -152,7 +152,7 @@ $('pause').onclick=pause;$('resume').onclick=resume;$('recover').onclick=()=>{re
 const driveKeys=['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','KeyW','KeyS','KeyA','KeyD','Space'];
 addEventListener('keydown',e=>{if(controlsDialog.open)return;if(e.code==='Escape'){if(mode==='paused')resume();else pause();return}
  if(mode!=='racing')return;if(driveKeys.includes(e.code)){e.preventDefault();keys.add(e.code)}else if(!e.repeat&&e.code==='KeyR')recover();else if(!e.repeat&&e.code==='KeyC'){closeCamera=!closeCamera;updateCamera(1,true)}});
-addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause()});
+addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',pause);document.addEventListener('visibilitychange',()=>{if(document.hidden)pause();updateAudio()});
 for(const b of document.querySelectorAll('[data-key]')){b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.key);b.classList.add('held')};const release=()=>{keys.delete(b.dataset.key);b.classList.remove('held')};b.onpointerup=b.onpointercancel=b.onlostpointercapture=release}
 function frame(stamp){const dt=prevStamp?Math.min(.12,(stamp-prevStamp)/1000):0;prevStamp=stamp;
  if(mode!=='paused'&&mode!=='finished'){accumulator+=dt;while(accumulator>=1/120){step(1/120);accumulator-=1/120}updateCamera(dt);hudTimer+=dt;if(hudTimer>.09&&!$('racehud').hidden){updateHud();hudTimer=0}}

@@ -1,3 +1,5 @@
+import {createGarageAudio} from './garage-audio.js';
+
 // A four-stroke six-cylinder cycle repeats every two crank revolutions.
 // Model the two exhaust banks separately so their pulse trains combine at the collector.
 function exhaustWave(context,bank){
@@ -48,11 +50,15 @@ export function createRaceAudio(context){
   const intake=filter('bandpass',510,.65,intakeLevel);
   const tires=filter('bandpass',1100,3.4,tireLevel);
   noise.connect(intake);noise.connect(tires);noise.connect(filter('lowpass',630,.7,windLevel));noise.start();
+  const setGarageAudible=createGarageAudio(context);
   let lastGear=null;
   const smooth=(param,value,time=.045)=>param.setTargetAtTime(value,context.currentTime,time);
   return {
-    update(car,audible){
-      smooth(master.gain,audible?.8:0,.022);
+    update(car,audible,mode){
+      const inGarage=mode==='garage';
+      setGarageAudible(audible && inGarage,audible && mode==='intro');
+      const engineLevel=inGarage?.27:.8;
+      smooth(master.gain,audible?engineLevel:0,mode==='intro'?.22:.022);
       if(!audible||!car)return;
       const speed=Math.abs(car.speed),rpm=Math.max(1050,car.rpm);
       const revs=Math.min(1,rpm/12500),load=car.throttle||0;
