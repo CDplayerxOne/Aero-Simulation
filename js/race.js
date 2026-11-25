@@ -16,8 +16,8 @@ function updateAudio(){if(!audio)return;const c=cars[0],audible=sound&&mode!=='p
 function drawMap(canvas,t,list=[],selected=true){
  const w=canvas.width,h=canvas.height,ctx=canvas.getContext('2d');ctx.clearRect(0,0,w,h);
  const b=t.bounds,scale=Math.min((w-18)/(b.maxX-b.minX),(h-18)/(b.maxZ-b.minZ)),point=(x,z)=>[(x-(b.minX+b.maxX)/2)*scale+w/2,h/2-(z-(b.minZ+b.maxZ)/2)*scale];
- ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=selected?'#f5d1ad':'#82969d';ctx.stroke();ctx.fillStyle='#ef5b32';const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
- for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?'#e1e8dc':'#ff6437';ctx.fill()}
+ ctx.beginPath();for(let i=0;i<t.count;i+=4){const p=t.nodes[i],v=point(p.x,p.z);if(i)ctx.lineTo(...v);else ctx.moveTo(...v)}ctx.closePath();ctx.lineWidth=list.length?3.7:4;ctx.strokeStyle=selected?'#b9f4e6':'#82969d';ctx.stroke();ctx.fillStyle='#ffd6a0';const [sx,sy]=point(t.nodes[0].x,t.nodes[0].z);ctx.fillRect(sx-3,sy-3,6,6);
+ for(const c of [...list].reverse()){ctx.beginPath();ctx.arc(...point(c.x,c.z),c.number?3.3:5,0,Math.PI*2);ctx.fillStyle=c.number?'#e1e8dc':'#ffd6a0';ctx.fill()}
 }
 for(const [i,t] of tracks.entries()){
  t.bounds={minX:Math.min(...t.nodes.map(p=>p.x)),maxX:Math.max(...t.nodes.map(p=>p.x)),minZ:Math.min(...t.nodes.map(p=>p.z)),maxZ:Math.max(...t.nodes.map(p=>p.z))};
