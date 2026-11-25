@@ -15,6 +15,7 @@
     <header class="race-top">
       <a class="wordmark glass" aria-label="Groundline home" href="./"><img src="brand.svg" alt="">Groundline</a>
       <div class="top-actions glass">
+        <button id="controlsButton" aria-haspopup="dialog" aria-controls="controlsDialog">Controls</button>
         <button id="sound" aria-pressed="false">Sound off</button>
         <button id="pause" hidden>Pause</button>
       </div>
@@ -57,10 +58,29 @@
         <button class="button glass" data-key="ArrowRight" aria-label="Steer right">▶</button>
       </div>
       <div>
+        <button class="button glass" data-key="Space">Drift</button>
         <button class="button glass" data-key="ArrowDown">Brake</button>
         <button class="button primary" data-key="ArrowUp">Gas</button>
       </div>
     </div>
+
+    <dialog id="controlsDialog" class="glass driving-controls" aria-labelledby="controlsTitle">
+      <h2 class="display" id="controlsTitle">Driving controls</h2>
+      <dl class="bindings">
+        <div><dt>Steer left / right</dt><dd><kbd>A</kbd> / <kbd>D</kbd> or <kbd>←</kbd> / <kbd>→</kbd></dd></div>
+        <div><dt>Throttle</dt><dd><kbd>W</kbd> or <kbd>↑</kbd></dd></div>
+        <div><dt>Brake</dt><dd><kbd>S</kbd> or <kbd>↓</kbd></dd></div>
+        <div><dt>Drift handbrake</dt><dd><kbd>Space</kbd></dd></div>
+        <div><dt>Switch camera</dt><dd><kbd>C</kbd></dd></div>
+        <div><dt>Recover car</dt><dd><kbd>R</kbd></dd></div>
+        <div><dt>Pause / resume</dt><dd><kbd>Esc</kbd></dd></div>
+      </dl>
+      <p>Turn into a corner and briefly hold Space or the Drift button. Release it and countersteer to catch the slide.</p>
+      <div class="sensitivity-row"><label for="sensitivity">Steering sensitivity</label><output id="sensitivityValue" for="sensitivity">100%</output></div>
+      <input id="sensitivity" type="range" min="40" max="160" value="100" step="5">
+      <div class="range-ends"><span>Gentle</span><span>Responsive</span></div>
+      <button id="controlsDone" class="button primary">Done</button>
+    </dialog>
 
     <section id="pausePanel" class="dialog glass" aria-labelledby="pause-heading" hidden>
       <h2 class="display" id="pause-heading">Paused</h2>

@@ -188,3 +188,28 @@ kbd { color: var(--text); }
   .position strong { font-size: 1.5rem; }
   .timing b { font-size: 1.125rem; }
 }
+
+.driving-controls {
+  width: min(410px, calc(100vw - 24px));
+  max-height: 90dvh;
+  overflow-y: auto;
+  padding: 22px;
+  color: var(--text);
+  background-color: #18283b;
+}
+.driving-controls::backdrop { background: #091421aa; }
+.driving-controls h2 { font-size: 1.75rem; }
+.bindings { margin-block: 16px; }
+.bindings div, .sensitivity-row, .range-ends { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+.bindings div { padding-block: 5px; border-bottom: 1px solid var(--edge-line); }
+.bindings dd { margin: 0; color: var(--muted); }
+.driving-controls p, .range-ends { color: var(--muted); font-size: .875rem; }
+.sensitivity-row { margin-top: 18px; font-weight: 600; }
+#sensitivity { width: 100%; margin: 10px 0 2px; accent-color: var(--accent); cursor: pointer; }
+#sensitivityValue { color: var(--accent); font-variant-numeric: tabular-nums; }
+#controlsDone { margin-top: 20px; width: 100%; }
+@media(max-width:480px){
+  .race-top .wordmark { font-size: 0; gap: 0; padding: 4px; }
+  .top-actions button { padding-inline: 9px; }
+  #touch button { min-width: 42px; padding-inline: 8px; }
+}
