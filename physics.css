@@ -1,0 +1,47 @@
+.guide { padding-bottom: 4rem; }
+.guide-cover { display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; }
+.guide-cover > div { padding: clamp(1.5rem, 4.5vw, 4rem); align-self: center; }
+.guide-cover h1 { font-size: clamp(2.8rem, 6vw, 5.6rem); }
+.guide-cover h1 em { font-style: normal; color: var(--accent); }
+.guide-cover p { max-width: 51ch; margin: 1.25rem 0 0; color: var(--muted); line-height: 1.6; }
+.guide-cover img { display: block; width: 100%; height: 100%; max-height: 30rem; min-height: 16rem; object-fit: cover; }
+.guide-layout { display: grid; grid-template-columns: minmax(10rem, 1fr) minmax(0, 47rem); gap: clamp(2rem, 5vw, 5rem); max-width: 67rem; margin: clamp(2rem, 5vw, 4rem) auto 0; }
+.contents { align-self: start; position: sticky; top: 1.25rem; display: grid; border-left: 2px solid var(--highlight-line); padding-left: 1rem; }
+.contents h2 { margin: 0 0 .5rem; font: 650 1.1rem var(--display); }
+.contents a { width: fit-content; padding: .35rem 0; font-size: .9375rem; color: var(--muted); text-underline-offset: .22em; }
+.contents a:hover { color: var(--accent); }
+.guide article section { scroll-margin-top: 1.25rem; padding-bottom: 2.25rem; }
+.guide article section + section { border-top: 1px solid var(--edge-line); padding-top: 2.25rem; }
+.guide article h2 { font-size: clamp(1.8rem, 3.5vw, 2.8rem); }
+.guide article h3 { margin: 1.5rem 0 .5rem; font: 650 1.28rem var(--display); }
+.guide article p, .guide article dd { line-height: 1.65; color: var(--muted); }
+.guide article strong { color: var(--text); }
+.guide dl { margin: 1.25rem 0; }
+.guide dt { font-weight: 650; }
+.guide dd { margin: .3rem 0 0; }
+.models { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+.models > div, .signals > div { border-top: 1px solid var(--edge-line); padding-top: .85rem; }
+.models dt, .signals dt span, .equations { color: var(--accent); }
+.signals > div + div { margin-top: 1rem; }
+.signals dt span { display: block; font-weight: 500; }
+.equations, .face-example { border-left: 3px solid var(--accent); padding: .7rem 1rem; background: var(--selected); }
+.equations { line-height: 1.85; font-variant-numeric: tabular-nums; }
+.worked { padding: clamp(1rem, 3vw, 2rem); margin: 1.5rem 0; }
+.guide article .worked h3 { margin-top: 0; }
+.speed-control { display: grid; grid-template-columns: 1fr auto; gap: .4rem; font-weight: 650; }
+.speed-control output { color: var(--accent); }
+.speed-control input { grid-column: 1 / -1; width: 100%; margin: 0; min-height: 1.75rem; accent-color: var(--accent); cursor: pointer; }
+.worked .example-values { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 0; }
+.example-values dt { color: var(--muted); font-size: .875rem; font-weight: 500; }
+.guide .example-values dd { color: var(--accent); font: 650 clamp(1.1rem, 2vw, 1.45rem) var(--display); font-variant-numeric: tabular-nums; }
+.guide .actions { margin-top: 1.5rem; }
+@media (max-width: 780px) {
+  .guide-layout { display: block; }
+  .contents { position: static; display: flex; flex-wrap: wrap; align-items: center; gap: .1rem 1rem; margin-bottom: 2rem; }
+  .contents h2 { flex-basis: 100%; }
+  .worked .example-values { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 600px) {
+  .guide-cover, .models { grid-template-columns: 1fr; }
+  .guide-cover img { min-height: 0; height: 10rem; object-position: center 55%; }
+}

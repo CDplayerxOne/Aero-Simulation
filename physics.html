@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#111c2a">
+  <meta name="description" content="How Groundline computes airflow, pressure, lift and drag in the Formula car demo and mesh playground, and how to interpret their limits.">
+  <title>Wind tunnel physics · Groundline</title>
+  <link rel="icon" href="brand.svg">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="physics.css">
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap nav-inner">
+      <a class="wordmark glass" href="./" aria-label="Groundline home"><img src="brand.svg" alt="">Groundline</a>
+      <nav class="glass" aria-label="Simulations">
+        <a href="wind-tunnel.html">Car demo</a>
+        <a href="playground.html">Mesh playground</a>
+      </nav>
+    </div>
+  </header>
+  <main class="wrap guide">
+    <header class="guide-cover glass">
+      <div>
+        <h1 class="display">Wind tunnel<br><em>physics</em></h1>
+        <p>Where does a downforce reading come from? In the car demo, wing angle and yaw set the load. In the playground, each patch of pressure on your mesh contributes a force. Follow both calculations from air speed to the final readout.</p>
+      </div>
+      <img src="assets/tunnel.webp" alt="Streamlines passing around the open-wheel car in the Groundline wind tunnel">
+    </header>
+    <div class="guide-layout">
+      <nav class="contents" aria-label="On this page">
+        <h2>On this page</h2>
+        <a href="#flow">Solving the flow</a>
+        <a href="#pressure">Speed and pressure</a>
+        <a href="#demo">Car demo telemetry</a>
+        <a href="#playground">Mesh telemetry</a>
+        <a href="#limits">Reading the limits</a>
+      </nav>
+      <article>
+        <section id="flow">
+          <h2 class="display">Solving the flow</h2>
+          <p>Both tunnels begin with a uniform stream of air. A grid divides the test section into small volumes called voxels. A solid face blocks air moving through it and allows air to slide along it. The solver finds the change in velocity needed to divert the stream around those obstacles.</p>
+          <p>For steady, incompressible, irrotational flow, the velocity disturbance is the gradient of a scalar potential, φ. Conservation of mass gives <strong>∇²φ = 0</strong> in the fluid. The code repeatedly updates each fluid cell using its open neighbours and the no-through-flow condition on blocked faces. Adding the resulting gradient to the incoming velocity gives a three-dimensional velocity field, expressed relative to the inlet speed.</p>
+          <dl class="models">
+            <div><dt>Car demo</dt><dd>A 111 × 25 × 53 grid with 0.105 m spacing represents the chassis, wheels, wings and floor above a slip ground plane. Yaw turns the incoming flow sideways. Rear wing incidence changes the wing obstacle. The solve allows up to 150 relaxation sweeps.</dd></div>
+            <div><dt>Mesh playground</dt><dd>A 72 × 41 × 43 grid with 0.12 m spacing represents the fitted mesh in a stream along +X. The worker projects every triangle onto three grid planes to mark the surface, then fills pairs of intersections along X for closed volumes. It rotates the mesh to the chosen orientation and angle of attack before voxelizing it. The solve allows up to 125 sweeps.</dd></div>
+          </dl>
+          <p><strong>What a streamline shows.</strong> Starting at an inlet seed, the code samples velocity, takes a half-step, then uses the midpoint velocity for the next step. Each line traces a direction through one steady solution. Moving highlights show travel along it. Pausing freezes the animation. In the demo, prescribed wheel wakes, wing-tip swirl and underfloor flow modify what the tracers follow.</p>
+        </section>
+        <section id="pressure">
+          <h2 class="display">From speed to pressure</h2>
+          <p>Let <i>U</i> be inlet air speed in m/s and <i>u</i> the local speed. Both tunnels use air density ρ = 1.225 kg/m³ and dynamic viscosity μ = 1.81 × 10<sup>−5</sup> Pa·s. Three quantities connect the flow picture to the instruments.</p>
+          <dl class="signals">
+            <div><dt>Dynamic pressure <span>q = ½ρU²</span></dt><dd>The pressure scale for aerodynamic loads, measured in pascals (N/m²). Doubling inlet speed quadruples q. The local static pressure can be higher or lower than the inlet static pressure.</dd></div>
+            <div><dt>Pressure coefficient <span>C<sub>p</sub> = (p − p<sub>∞</sub>) / q</span></dt><dd>Bernoulli’s relation gives C<sub>p</sub> = 1 − (u/U)² in the base model. Air at half the inlet speed gives +0.75. Air at 1.5 times inlet speed gives −1.25. A negative value means suction relative to the inlet.</dd></div>
+            <div><dt>Reynolds number <span>Re = ρUL / μ</span></dt><dd>This dimensionless ratio compares inertial and viscous effects at a chosen length L. Both dashboards display it in millions. Viscosity enters this readout only. Changing speed scales Re without triggering transition or turbulence in the solver.</dd></div>
+          </dl>
+        </section>
+        <section id="demo">
+          <h2 class="display">Car demo telemetry</h2>
+          <p>The demo estimates whole-car coefficients from rear wing incidence α and yaw β. Its fixed reference length is 5.50 m and its reference area is 1.50 m². The following curves define the car shown here. Angles below are written in degrees.</p>
+          <div class="equations" aria-label="Demo coefficient equations">
+            <div>w = 0.95 sin(α + 4°) / sin(22°)</div>
+            <div>C<sub>L</sub> = −(2.17 + w) cos<sup>2.3</sup>(β)</div>
+            <div>C<sub>D</sub> = 0.765 + 0.145w² + 0.95 sin²(β)</div>
+          </div>
+          <p>The dimensionless term <i>w</i> represents wing loading. Increasing incidence increases its contribution to downforce and adds a quadratic drag penalty. Yaw reduces the vertical load and adds drag symmetrically to either side. The dashboard reports <strong>drag = qAC<sub>D</sub></strong> along the wind axis and <strong>downforce = −qAC<sub>L</sub></strong>. It divides newtons by 1,000 for the kN readouts. A downward load has a negative lift coefficient.</p>
+          <div class="worked glass">
+            <h3>Work through the default car</h3>
+            <p>At 18° rear wing incidence and 0° yaw, w = 0.95. This gives C<sub>D</sub> ≈ 0.896 and C<sub>L</sub> = −3.12. Change the speed to see how those same coefficients turn into forces.</p>
+            <div class="speed-control"><label for="example-speed">Inlet air speed</label><output for="example-speed" id="example-speed-value">60 m/s</output>
+              <input id="example-speed" type="range" min="20" max="90" value="60" step="1">
+            </div>
+            <dl class="example-values">
+              <div><dt>Dynamic pressure</dt><dd><span id="example-q">2,205</span> Pa</dd></div>
+              <div><dt>Reynolds number</dt><dd><span id="example-re">22.33</span> × 10⁶</dd></div>
+              <div><dt>Drag</dt><dd><span id="example-drag">2.96</span> kN</dd></div>
+              <div><dt>Downforce</dt><dd><span id="example-load">10.32</span> kN</dd></div>
+            </dl>
+          </div>
+          <h3>What makes the car’s pressure colours?</h3>
+          <p>The shader samples speed just outside the body and converts it to C<sub>p</sub>. It raises pressure on wind-facing surfaces and adds prescribed loading on the wings and floor. Under the car, a separate passage model speeds up the air as the roof height shrinks, then lets it slow through the diffuser. The amber corkscrews follow a prescribed counter-rotating vortex pair. These approximations explain the visual patterns. The dashboard takes its loads directly from the coefficient curves above.</p>
+        </section>
+        <section id="playground">
+          <h2 class="display">Mesh playground telemetry</h2>
+          <h3>Establish the scale</h3>
+          <p>An upload is centred and scaled to fit the test section, with room for rotation. The dimensions under telemetry are in fitted tunnel metres. After applying the X, Y and Z orientation controls, the solver measures the full mesh at zero angle of attack. Its streamwise extent is the reference length L for Re. If the bounding-box spans are x, y and z, the reference area is <strong>A = max(xy, yz, zx)</strong>. Changing mesh orientation can change both references. Sweeping angle of attack holds them fixed.</p>
+          <h3>Sum the pressure on exposed faces</h3>
+          <p>For each fluid cell touching a solid voxel, the solver computes C<sub>p</sub> from its velocity. Each shared face covers ΔA = (0.12 m)². With <i>n</i> the outward unit normal of the solid face, its contribution is <strong>ΔF = −q C<sub>p</sub> n ΔA</strong>. Positive pressure pushes inward. Suction pulls outward. Summing the X components gives signed pressure drag along the stream. Summing the Y components gives lift, positive upward. Both readouts use newtons.</p>
+          <p class="face-example"><strong>One face at 35 m/s.</strong> Here q ≈ 750.3 Pa. An upstream-facing patch with C<sub>p</sub> = +0.75 pushes downstream by 750.3 × 0.75 × 0.0144 ≈ <strong>8.1 N</strong>. Other faces can reinforce or cancel this contribution.</p>
+          <dl class="signals">
+            <div><dt>Pressure drag and lift coefficients</dt><dd>Divide the summed drag or lift by qA to get C<sub>D,p</sub> or C<sub>L</sub>. Holding the mesh pose fixed and doubling U quadruples both forces while the coefficients stay constant.</dd></div>
+            <div><dt>Minimum and maximum surface C<sub>p</sub></dt><dd>These are the lowest and highest values in fluid cells adjacent to the voxel surface. The heatmap stores a colour range from −2 to +1 and interpolates near the displayed surface. The force sum and extrema use the original, unclipped values, so a minimum below −2 can share the same colour as −2.</dd></div>
+            <div><dt>Peak surface airspeed</dt><dd>The smallest adjacent-cell pressure corresponds to the fastest sampled flow. Inverting Bernoulli gives u<sub>peak</sub> = U √(1 − C<sub>p,min</sub>), in m/s. An unresolved surface leaves the load and extrema readouts blank.</dd></div>
+          </dl>
+        </section>
+        <section id="limits">
+          <h2 class="display">Reading the limits</h2>
+          <dl class="signals">
+            <div><dt>Small drag can be a feature of the mathematics</dt><dd>In ideal potential flow, pressures on the front and rear of a closed body can balance. Real skin friction and a separated wake contribute drag that the playground omits. Voxel asymmetry and finite resolution can leave a small residual of either sign. A slightly negative result gives little evidence of real thrust.</dd></div>
+            <div><dt>A wing can stall in the real tunnel</dt><dd>The playground has no circulation condition at a sharp trailing edge and no boundary layer that can detach. It can miss much of a wing’s real lift and cannot locate its stall angle. The demo’s illustrative lift curve and added wake patterns likewise give no calibrated stall or vortex-strength prediction.</dd></div>
+            <div><dt>A smooth preview can conceal coarse physics</dt><dd>The full uploaded triangle list feeds the same fixed grid even when the display uses fewer triangles. A narrow slot can close, a thin fin can disappear, and a small rotation can move a surface into a different row of cells. Open or overlapping shells can also make the interior ambiguous. More triangles alone do not refine the flow grid.</dd></div>
+            <div><dt>Scale and time matter</dt><dd>The fitted playground geometry determines force and Reynolds number. Two exports of the same shape in different source units can produce the same result. Both tunnels assume constant density and a steady inlet. Gust response, transient shedding, compressibility and a rotating tyre’s viscous interaction with the road lie outside these models.</dd></div>
+          </dl>
+          <p>For a useful comparison, hold the mesh orientation and speed fixed and change angle of attack alone. Watch how the pressure pattern moves as well as how the integrated lift changes. For absolute vehicle loads, compare against measurements or a validated viscous-flow solution at the same physical scale and Reynolds number.</p>
+          <div class="actions"><a class="button secondary" href="wind-tunnel.html">Open car demo</a><a class="button secondary" href="playground.html">Open mesh playground</a></div>
+        </section>
+      </article>
+    </div>
+  </main>
+  <script src="js/physics-example.js" defer></script>
+</body>
+</html>
