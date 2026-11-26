@@ -2,3 +2,4 @@ dist/
 .wrangler/
 /public/
 /.vercel/
+node_modules/

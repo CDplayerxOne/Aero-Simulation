@@ -37,9 +37,17 @@ Touch devices get on-screen steering, throttle, brake, and drift controls. Open 
 ### Pair a phone
 1. On the laptop, open the garage and choose **Pair phone**. A six-digit code appears for five minutes.
 2. On the phone, open the Groundline home page and choose **Phone controller**. Enter the six digits and tap **Pair phone**. Scanning the laptop's QR with the phone also fills in the code.
-3. When both screens say **Connected**, you can drive. Use the same Wi-Fi and the same signed-in ChatGPT account on both devices. Controls travel directly over WebRTC.
+3. When both screens say **Connected**, you can drive. Open the same deployment URL on both devices and use the same Wi-Fi. On the private ChatGPT Site, sign in to the same account. Controls travel directly over WebRTC.
 
 Hold the phone upright in portrait or landscape and allow motion access. Rotate it like a steering wheel and use **Recenter** for a comfortable neutral position. Touch steering is available alongside throttle, brake, drift, camera, recovery and race controls. Use HTTPS for motion access. Guest networks with client isolation can prevent a direct connection.
+
+## Deploy on Vercel
+
+Import this repository with its root as the Vercel project root. The checked-in `vercel.json` builds the static pages into `public/` and routes `/api/pair/*` to a Node function. The garage and wind tunnels work immediately. Phone pairing uses private Vercel Blob storage to share a temporary handshake between the two devices.
+
+Connect a private Blob store in the project's **Storage** tab and redeploy. Apply the connection to **Production**, and optionally **Preview** to pair on preview deployments. Both devices must open the same HTTPS hostname.
+
+A code expires after five minutes. The garage deletes its handshake on connection or cancellation. A one-day Blob TTL cleans up abandoned records. During the race, inputs travel directly over WebRTC.
 
 ## Explore airflow
 
