@@ -29,7 +29,7 @@ export function telemetry(speed,ref,loads){
   // Standard sea-level air. The solver's velocity field is normalized by freestream speed.
   const density=1.225,viscosity=1.81e-5,q=.5*density*speed**2;
   return {
-    pressure:q,reynolds:ref.length>0?density*speed*ref.length/viscosity:null,
+    pressure:q,reynolds:ref?.length>1e-9?density*speed*ref.length/viscosity:null,
     minCp:loads?.minCp??null,maxCp:loads?.maxCp??null,
     peakSpeed:loads?speed*Math.sqrt(1-loads.minCp):null,
     drag:loads?q*loads.dragArea:null,lift:loads?q*loads.liftArea:null,

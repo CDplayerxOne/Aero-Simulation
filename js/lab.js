@@ -28,13 +28,18 @@ function start(){
   scene.add(new THREE.HemisphereLight(0xe7f8ff,0x51647d,2.1));const sun=new THREE.DirectionalLight(0xddeeff,3.3);sun.position.set(-4,6,2);scene.add(sun);
   const grid=new THREE.GridHelper(16,64,0x58728c,0x3d556e);grid.position.y=-2.2;scene.add(grid);
   const mat=new THREE.MeshStandardMaterial({color:0x8ba9b9,metalness:.45,roughness:.34,side:THREE.DoubleSide});
-  const model=new THREE.Mesh(new THREE.BufferGeometry(),mat);scene.add(model);
+  const incidence=new THREE.Group();
+  const model=new THREE.Mesh(new THREE.BufferGeometry(),mat);
+  incidence.add(model);scene.add(incidence);
+  const axes=['X','Y','Z'];
   const heat=pressureMaterial();
   let pressureReady=false,reference,simulationVertices,loads=null;
   function renderTelemetry(){
     const speed=Number($('speed').value);
     const values=telemetry(speed,reference,loads);
     const format=(value,digits)=>value===null?'—':(Number(value.toFixed(digits))||0).toLocaleString(undefined,{maximumFractionDigits:digits});
+    $('refLength').textContent=reference?reference.length.toFixed(2)+' m':'—';
+    $('refArea').textContent=reference?reference.area.toFixed(2)+' m²':'—';
     $('pressure').textContent=format(values.pressure,0);
     $('reynolds').textContent=values.reynolds===null?'—':format(values.reynolds/1e6,3);
     $('drag').textContent=format(values.drag,1);
@@ -64,7 +69,9 @@ function start(){
     const job=solveWorker;
     solveWorker.onmessage=e=>{
       if(job!==solveWorker)return;
+      reference=e.data.reference;
       if(e.data.error){
+        renderTelemetry();
         statusText=e.data.error;status();job.terminate();solveWorker=null;return;
       }
       loads=e.data.loads;renderTelemetry();
@@ -80,9 +87,43 @@ function start(){
       dots.geometry.dispose();dots.geometry=new THREE.BufferGeometry();dots.geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*paths.length*4),3));dots.frustumCulled=false;
       statusText=loads?'Flow field ready':'Flow field ready. No surface resolved for load estimates.';status();solveWorker.terminate();solveWorker=null;
     };solveWorker.onerror=()=>{if(job!==solveWorker)return;statusText='Solver failed. Adjust the angle to retry.';status()};
-    solveWorker.postMessage({vertices:simulationVertices,angle:model.rotation.z});
+    solveWorker.postMessage({vertices:simulationVertices,orientation:model.matrix.elements,angle:incidence.rotation.z});
   }
-  function updateAngle(){statusText='Computing flow field…';status();loads=null;renderTelemetry();pressureReady=false;syncSurface();model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();solveWorker=null;timer=setTimeout(solve,100)}
+  function updatePose(){
+    incidence.rotation.z=-THREE.MathUtils.degToRad(Number($('angle').value));
+    $('angleValue').value=$('angle').value+'°';
+    statusText='Computing flow field…';status();
+    loads=null;renderTelemetry();pressureReady=false;syncSurface();
+    line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);
+    clearTimeout(timer);solveWorker?.terminate();solveWorker=null;
+    timer=setTimeout(solve,100);
+  }
+  function orientMesh(){
+    const angles=axes.map(axis=>{
+      const slider=$('rotate'+axis);
+      $('degrees'+axis).value=slider.value;
+      slider.setAttribute('aria-valuetext',slider.value+' degrees');
+      return THREE.MathUtils.degToRad(Number(slider.value));
+    });
+    // Extrinsic rotations about the tunnel axes, X then Y then Z.
+    model.rotation.set(...angles,'ZYX');
+    model.updateMatrix();
+    reference=angles.every(a=>a===0)?referenceDimensions(model.geometry.boundingBox):null;
+    updatePose();
+  }
+  function resetOrientation(){
+    for(const axis of axes)$('rotate'+axis).value=0;
+    orientMesh();
+  }
+  for(const axis of axes){
+    const slider=$('rotate'+axis),degrees=$('degrees'+axis);
+    slider.oninput=orientMesh;
+    degrees.onchange=()=>{
+      if(Number.isFinite(degrees.valueAsNumber))slider.value=String(Math.round(degrees.valueAsNumber));
+      orientMesh();
+    };
+  }
+  $('resetOrientation').onclick=resetOrientation;
   function setModel(vertices,name,prepared){
     model.geometry.dispose();
     simulationVertices=vertices;
@@ -96,13 +137,10 @@ function start(){
       geometry.computeVertexNormals();geometry.computeBoundingBox();
     }
     model.geometry=geometry;
-    reference=referenceDimensions(model.geometry.boundingBox);
-    $('refLength').textContent=reference.length.toFixed(2)+' m';
-    $('refArea').textContent=reference.area.toFixed(2)+' m²';
     $('meshName').textContent=name;$('triCount').textContent=(vertices.length/9).toLocaleString();
     $('previewInfo').hidden=surface===vertices;
     if(surface!==vertices)$('previewInfo').textContent='Preview and wireframe show '+(surface.length/9).toLocaleString()+' triangles. The solver uses the full mesh.';
-    updateAngle()}
+    resetOrientation()}
   function load(file){
     if(!file)return;readWorker?.terminate();readWorker=null;importError='';
     const type=file.name.toLowerCase().split('.').pop();if(!['stl','obj'].includes(type)||file.size>maxFileBytes){importError='Choose an OBJ or STL file no larger than '+maxFileMiB+' MiB.';status();return}
@@ -114,7 +152,7 @@ function start(){
   $('meshLimit').textContent='OBJ or STL · '+maxFileMiB+' MiB · '+maxTriangles.toLocaleString()+' triangles max';
   $('file').onchange=e=>{load(e.target.files[0]);e.target.value=''};
   const drop=$('drop');for(const type of ['dragover','dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.toggle('over',type==='dragover');if(type==='drop')load(e.dataTransfer.files[0])});
-  $('angle').oninput=updateAngle;$('speed').oninput=()=>{$('speedValue').value=$('speed').value+' m/s';renderTelemetry()};
+  $('angle').oninput=updatePose;$('speed').oninput=()=>{$('speedValue').value=$('speed').value+' m/s';renderTelemetry()};
   $('heat').onchange=syncSurface;$('wire').onchange=syncSurface;$('traces').onchange=e=>{dots.visible=line.visible=e.target.checked;needsRender=true};$('pause').onclick=()=>{running=!running;$('pause').textContent=running?'Pause flow':'Resume flow'};
   setModel(airfoil(),'Reference airfoil');const clock=new THREE.Clock();
   new ResizeObserver(()=>{needsRender=true;const el=renderer.domElement;renderer.setSize(el.clientWidth,el.clientHeight,false);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix()}).observe(renderer.domElement);

@@ -45,7 +45,7 @@
           <div><dt>Peak surface airspeed</dt><dd><span id="peakSpeed">—</span> <small>m/s</small></dd></div>
         </dl>
         <p>Positive lift acts upward. Drag is the signed pressure force along the airflow. These pressure-only loads can be near zero. The model omits circulation, skin friction and wake separation.</p>
-        <p>Estimates use the fitted mesh at zero incidence. Reynolds number uses its streamwise length (<span id="refLength">—</span>). Coefficients use the largest face of its bounding box (<span id="refArea">—</span>).</p>
+        <p>Reference dimensions use the oriented mesh at zero angle of attack. Reynolds number uses its streamwise length (<span id="refLength">—</span>). Coefficients use the largest face of its bounding box (<span id="refArea">—</span>).</p>
       </details>
     </div>
     <aside class="lab-panel glass" aria-labelledby="tunnel-heading">
@@ -69,6 +69,26 @@
           <output id="angleValue" for="angle">4°</output>
           <input id="angle" type="range" min="-25" max="25" value="4">
         </div>
+        <details class="mesh-orientation">
+          <summary>Mesh orientation</summary>
+          <p>Air flows along +X. Y is up. Drag a slider or enter an angle in degrees.</p>
+          <div class="rotation-row">
+            <label for="rotateX">X axis</label>
+            <input id="rotateX" type="range" min="-180" max="180" value="0">
+            <span><input id="degreesX" type="number" min="-180" max="180" step="1" value="0" aria-label="X rotation in degrees">°</span>
+          </div>
+          <div class="rotation-row">
+            <label for="rotateY">Y axis</label>
+            <input id="rotateY" type="range" min="-180" max="180" value="0">
+            <span><input id="degreesY" type="number" min="-180" max="180" step="1" value="0" aria-label="Y rotation in degrees">°</span>
+          </div>
+          <div class="rotation-row">
+            <label for="rotateZ">Z axis</label>
+            <input id="rotateZ" type="range" min="-180" max="180" value="0">
+            <span><input id="degreesZ" type="number" min="-180" max="180" step="1" value="0" aria-label="Z rotation in degrees">°</span>
+          </div>
+          <button type="button" id="resetOrientation" class="button secondary">Reset orientation</button>
+        </details>
         <label class="check">Show streamlines <input id="traces" type="checkbox" role="switch" checked></label>
         <label class="check">Pressure heatmap <input id="heat" type="checkbox" role="switch" aria-controls="heatLegend"></label>
         <div id="heatLegend" hidden>

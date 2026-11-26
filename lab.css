@@ -103,6 +103,16 @@
 .slider output { color: var(--accent); font: 650 .9375rem var(--display); font-variant-numeric: tabular-nums; }
 .slider input { width: 100%; margin: 2px 0 0; accent-color: var(--accent); cursor: pointer; }
 
+.mesh-orientation { margin: 12px 0; padding-block: 9px; border-block: 1px solid var(--edge-line); }
+.mesh-orientation summary { cursor: pointer; font-size: .9375rem; font-weight: 650; }
+.mesh-orientation summary::marker { color: var(--accent); }
+.mesh-orientation p { margin: 8px 0; font-size: .875rem; color: var(--muted); }
+.rotation-row { display: grid; grid-template-columns: 3em minmax(0,1fr) 4.5em; align-items: center; gap: 8px; margin: 6px 0; font-size: .875rem; }
+.rotation-row input[type=range] { width: 100%; margin: 0; accent-color: var(--accent); cursor: pointer; }
+.rotation-row span { display: flex; align-items: center; justify-content: end; gap: 2px; color: var(--accent); }
+.rotation-row input[type=number] { width: 3.75rem; box-sizing: border-box; padding: 3px; text-align: right; color: inherit; background: var(--glass-base); border: 1px solid var(--highlight-line); border-radius: 6px; font: inherit; }
+.mesh-orientation button { margin: 4px 0; padding: 5px 12px; }
+
 .check {
   display: flex;
   justify-content: space-between;

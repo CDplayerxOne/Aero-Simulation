@@ -37,6 +37,14 @@ self.onmessage=async({data:{file,type}})=>{
     const original=new BufferGeometry().setAttribute('position',new BufferAttribute(vertices,3));
     original.computeBoundingBox();
     original.computeBoundingSphere();
+    // Fit once, so a corner stays inside the shortest tunnel half-span (2.4 m)
+    // with a grid cell of clearance, even after arbitrary pitch, roll or yaw.
+    const rotationClearance=2.28;
+    const radius=original.boundingSphere.radius+original.boundingSphere.center.length();
+    if(radius>rotationClearance){
+      const scale=rotationClearance/radius;
+      original.scale(scale,scale,scale);
+    }
     const preview=await makePreview(vertices);
     const geometry=preview?new BufferGeometry().setAttribute('position',new BufferAttribute(preview,3)):original;
     geometry.computeVertexNormals();

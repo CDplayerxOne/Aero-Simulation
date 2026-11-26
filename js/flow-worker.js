@@ -1,4 +1,4 @@
-import {integratePressure} from './aero-telemetry.js';
+import {integratePressure,referenceDimensions} from './aero-telemetry.js';
 // Solve a velocity potential on a regular grid. Solid cells have zero normal flux.
 const nx=72, ny=41, nz=43, h=0.12, slice=nx*ny, n=slice*nz;
 const x0=-(nx-1)*h/2, y0=-(ny-1)*h/2, z0=-(nz-1)*h/2;
@@ -33,17 +33,26 @@ function voxelize(vertices) {
     for(let p=0;p<a.length;p+=2)for(let i=Math.ceil(a[p]);i<=Math.floor(a[p+1]);i++)solid[index(i,key%ny,Math.floor(key/ny))]=1}
   return solid;
 }
-self.onmessage=({data:{vertices,angle}})=>{
-  // The worker owns this structured clone. Rotate only the positions here;
-  // normals and bounds stay on the render thread and are never cloned.
+// The preview sends its local rotation matrix in Three.js column-major order.
+const identity=[1,0,0,0,0,1,0,0,0,0,1,0,0,0,0,1];
+self.onmessage=({data:{vertices,angle,orientation=identity}})=>{
   const cos=Math.cos(angle),sin=Math.sin(angle);
+  const m=orientation;
+  let minX=Infinity,minY=Infinity,minZ=Infinity,maxX=-Infinity,maxY=-Infinity,maxZ=-Infinity;
   for(let i=0;i<vertices.length;i+=3){
-    const x=vertices[i],y=vertices[i+1];
-    vertices[i]=cos*x-sin*y;vertices[i+1]=sin*x+cos*y;
+    const x=vertices[i],y=vertices[i+1],z=vertices[i+2];
+    const ax=m[0]*x+m[4]*y+m[8]*z;
+    const ay=m[1]*x+m[5]*y+m[9]*z;
+    const az=m[2]*x+m[6]*y+m[10]*z;
+    minX=Math.min(minX,ax);minY=Math.min(minY,ay);minZ=Math.min(minZ,az);
+    maxX=Math.max(maxX,ax);maxY=Math.max(maxY,ay);maxZ=Math.max(maxZ,az);
+    // Apply tunnel incidence after measuring the aligned mesh at zero incidence.
+    vertices[i]=cos*ax-sin*ay;vertices[i+1]=sin*ax+cos*ay;vertices[i+2]=az;
   }
+  const reference=referenceDimensions({min:{x:minX,y:minY,z:minZ},max:{x:maxX,y:maxY,z:maxZ}});
   const solid=voxelize(vertices);
   if(!solid){
-    self.postMessage({error:'Too many overlapping faces at this angle. Simplify the mesh or change the angle.'});
+    self.postMessage({reference,error:'Too many overlapping faces at this angle. Simplify the mesh or change the angle.'});
     return;
   }
   const phi=new Float32Array(n), masks=new Uint8Array(n), inv=new Float32Array(n),bias=new Float32Array(n);
@@ -88,5 +97,5 @@ self.onmessage=({data:{vertices,angle}})=>{
   }
   const pressure={texels,dimensions:[nx,ny,nz],origin:[x0,y0,z0],spacing:h};
   const loads=integratePressure(solid,vel,nx,ny,nz,h);
-  self.postMessage({paths,pressure,loads},[texels.buffer,...paths.map(p=>p.buffer)]);
+  self.postMessage({paths,pressure,loads,reference},[texels.buffer,...paths.map(p=>p.buffer)]);
 };
