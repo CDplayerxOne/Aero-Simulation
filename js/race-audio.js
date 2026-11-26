@@ -51,15 +51,20 @@ export function createRaceAudio(context){
   const tires=filter('bandpass',1100,3.4,tireLevel);
   noise.connect(intake);noise.connect(tires);noise.connect(filter('lowpass',630,.7,windLevel));noise.start();
   const setGarageAudible=createGarageAudio(context);
-  let lastGear=null;
+  let lastGear=null,lastMasterLevel=null;
   const smooth=(param,value,time=.045)=>param.setTargetAtTime(value,context.currentTime,time);
   return {
     update(car,audible,mode){
       const inGarage=mode==='garage';
       setGarageAudible(audible && inGarage,audible && mode==='intro');
-      const engineLevel=inGarage?.27:.8;
-      smooth(master.gain,audible?engineLevel:0,mode==='intro'?.22:.022);
-      if(!audible||!car)return;
+      const finished=mode==='finished';
+      const level=audible && !finished ? (inGarage?.27:.8) : 0;
+      if(level!==lastMasterLevel){
+        const release=audible && finished ? .22 : mode==='intro' ? .22 : .022;
+        smooth(master.gain,level,release);
+        lastMasterLevel=level;
+      }
+      if(!audible||!car||finished)return;
       const speed=Math.abs(car.speed),rpm=Math.max(1050,car.rpm);
       const revs=Math.min(1,rpm/12500),load=car.throttle||0;
       // Retain engine pitch when lifting. A shift briefly cuts combustion load.
