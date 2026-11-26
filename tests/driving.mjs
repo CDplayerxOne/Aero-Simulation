@@ -48,3 +48,28 @@ test('a glancing rail impact removes outward velocity without snapping the headi
   assert.ok(Math.abs(outward)<.05);
   assert.ok(Math.abs(driver.heading-initialHeading)<.01);
 });
+
+test('a powered turn builds cornering force without spinning and settles on release',()=>{
+  // A level skidpad isolates tire behavior from barriers, banking and curbs.
+  const surface={x:0,z:0,tx:0,tz:1,grade:0,bank:0};
+  const skidpad={
+    length:100000,width:10000,ds:1,sample:()=>surface,
+    locate:(x,z)=>({s:z,offset:x,p:surface,i:0})
+  };
+  for(const speed of [25,40,60]){
+    for(const direction of [-1,1]){
+      const car=makeDriver(skidpad,0,0,0);
+      car.speed=speed;
+      let peakSlip=0,peakCornering=0;
+      for(let i=0;i<240;i++){
+        const steer=i<150?direction:0;
+        advance(car,{steer,gas:1,brake:0},skidpad,1/120);
+        peakSlip=Math.max(peakSlip,Math.abs(Math.atan2(car.side,car.speed)));
+        peakCornering=Math.max(peakCornering,direction*car.latAcc);
+      }
+      assert.ok(peakSlip<9*Math.PI/180,'rear slides more than nine degrees');
+      assert.ok(peakCornering>10,'car must still corner at over 1 g');
+      assert.ok(Math.abs(car.omega)<.1,'rotation persists after steering release');
+    }
+  }
+});
