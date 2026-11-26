@@ -21,6 +21,7 @@
     </div>
   </header>
   <main class="lab wrap" aria-labelledby="lab-heading">
+    <div class="lab-results">
     <section class="lab-stage">
       <canvas id="labview" aria-label="Interactive three-dimensional wind tunnel. Drag to orbit and scroll to zoom." tabindex="0"></canvas>
       <div class="lab-title glass"><h1 id="lab-heading" class="display">Mesh playground</h1></div>
@@ -30,6 +31,20 @@
         <span class="stage-hint">Drag to orbit · Scroll to zoom</span>
       </div>
     </section>
+    <details class="aero-panel glass" open>
+      <summary>Aerodynamic telemetry</summary>
+      <dl class="aero-readings">
+        <div><dt>Lift force</dt><dd><span id="lift">—</span> <small>N</small></dd></div>
+        <div><dt>Pressure drag</dt><dd><span id="drag">—</span> <small>N</small></dd></div>
+        <div><dt>Dynamic pressure</dt><dd><span id="pressure">—</span> <small>Pa</small></dd></div>
+        <div><dt>Lift coefficient · C<sub>L</sub></dt><dd id="cl">—</dd></div>
+        <div><dt>Pressure drag coefficient · C<sub>D,p</sub></dt><dd id="cd">—</dd></div>
+        <div><dt>Reynolds number</dt><dd><span id="reynolds">—</span> <small>× 10⁶</small></dd></div>
+      </dl>
+      <p>Positive lift acts upward. Drag is the signed pressure force along the airflow. The inviscid model omits skin friction and wake separation.</p>
+      <p>Estimates use the fitted mesh at zero incidence. Reynolds number uses its streamwise length (<span id="refLength">—</span>). Coefficients use the largest face of its bounding box (<span id="refArea">—</span>).</p>
+    </details>
+    </div>
     <aside class="lab-panel glass" aria-labelledby="tunnel-heading">
       <h2 class="display" id="tunnel-heading">Wind tunnel</h2>
       <p class="lab-intro">Load a mesh to see how its shape changes the surrounding airflow.</p>
@@ -66,7 +81,6 @@
       </div>
       <dl class="lab-data">
         <div><dt>Triangles</dt><dd id="triCount">—</dd></div>
-        <div><dt>Dynamic pressure</dt><dd id="pressure">750 Pa</dd></div>
       </dl>
       <p class="method">Meshes are fitted to the test section. The voxel potential-flow model approximates steady, incompressible airflow. Viscous drag and turbulence are outside its scope.</p>
       <a class="demo-link" href="wind-tunnel.html">Open the original car demo</a>

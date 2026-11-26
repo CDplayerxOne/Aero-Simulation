@@ -52,7 +52,7 @@ A code expires after five minutes. The garage deletes its handshake on connectio
 ## Explore airflow
 
 - **[Wind tunnel demo](wind-tunnel.html)** — Adjust air speed, yaw, and rear wing incidence. Inspect streamlines, estimated surface pressure, and undertray tracers. The telemetry panel shows Reynolds number, lift and drag coefficients, and estimates of drag and downforce. Turn on the **Aerodynamics guide** to explore parts of the car.
-- **[Mesh playground](playground.html)** — Start with the reference airfoil or import an OBJ or STL file up to 20 MB and 350,000 triangles. Adjust air speed and angle of attack and inspect streamlines, the surface pressure heatmap, or the mesh wireframe. The browser reads and processes your file locally.
+- **[Mesh playground](playground.html)** — Start with the reference airfoil or import an OBJ or STL file up to 20 MB and 350,000 triangles. Adjust air speed and angle of attack and inspect streamlines, the surface pressure heatmap, or the mesh wireframe. The telemetry panel reports pressure-derived forces and coefficients, dynamic pressure, and Reynolds number for the fitted mesh. The browser reads and processes your file locally.
 
 Both wind tunnels use simplified potential-flow models for qualitative comparisons. The demo's load estimates are illustrative, and the models do not resolve boundary layers or transient turbulence.
 

@@ -7,7 +7,9 @@
   padding-bottom: clamp(16px, 4vw, 36px);
 }
 
+.lab-results { min-width: 0; display: flex; flex-direction: column; gap: 12px; }
 .lab-stage {
+  flex: 1;
   position: relative;
   min-height: 440px;
   overflow: hidden;
@@ -140,8 +142,15 @@
 .lab-data { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 12px; margin: 16px 0 10px; }
 .lab-data dt { color: var(--muted); font-size: .8125rem; }
 .lab-data dd { margin: 2px 0 0; font: 650 1.375rem/1.2 var(--display); font-variant-numeric: tabular-nums; }
-.lab-data div:last-child { padding-left: 12px; border-left: 1px solid var(--edge-line); }
-.lab-data div:last-child dd { color: var(--accent); }
+.aero-panel { padding: 14px 18px; }
+.aero-panel summary { cursor: pointer; color: var(--text); font: 650 1.125rem var(--display); }
+.aero-panel summary::marker { color: var(--accent); }
+.aero-readings { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px 18px; margin: 14px 0; }
+.aero-readings dt { color: var(--muted); font-size: .875rem; }
+.aero-readings dd { margin: 3px 0 0; color: var(--accent); font: 650 clamp(1.25rem,2vw,1.8rem)/1.1 var(--display); font-variant-numeric: tabular-nums; }
+.aero-readings small { color: var(--muted); font: 500 .825rem var(--sans); }
+.aero-panel p { margin: 6px 0 0; color: var(--muted); font-size: .875rem; line-height: 1.45; }
+@media (max-width: 530px) { .aero-readings { grid-template-columns: repeat(2,minmax(0,1fr)); } }
 
 .demo-link { color: var(--accent); font-size: .875rem; font-weight: 650; text-decoration: underline; text-underline-offset: 3px; }
 #viewError { position: absolute; inset: 50% 14px auto; margin-inline: auto; width: fit-content; max-width: calc(100% - 28px); padding: 14px; transform: translateY(-50%); }
@@ -149,7 +158,7 @@
 
 @media (max-width: 800px) {
   .lab { grid-template-columns: 1fr; }
-  .lab-stage { height: 55dvh; min-height: 320px; }
+  .lab-stage { flex: none; height: 55dvh; min-height: 320px; }
 }
 
 @media (pointer: coarse) {
