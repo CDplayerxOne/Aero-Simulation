@@ -2,7 +2,7 @@
 
 Groundline is a browser-based racing simulator and aerodynamics lab. Race the open-wheel Formula 22, explore airflow around the same chassis in the wind tunnel, or test your own 3D mesh.
 
-[Play Groundline on Vercel](https://groundline-five.vercel.app)
+[Try Groundline](https://groundline-five.vercel.app)
 
 ![Groundline's lime and navy Formula 22 in the wind tunnel](assets/hero.webp)
 
