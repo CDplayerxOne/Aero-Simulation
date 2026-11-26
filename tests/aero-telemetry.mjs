@@ -36,7 +36,7 @@ test('pitching an uploaded flat plate changes its solved surface pressures',asyn
   try{
     await import('../js/mesh-worker.js');
     const source='v -1 0 -1\nv 1 0 -1\nv 1 0 1\nv -1 0 1\nf 1 2 3 4';
-    self.onmessage({data:{buffer:new TextEncoder().encode(source).buffer,type:'obj'}});
+    await self.onmessage({data:{file:new Blob([source]),type:'obj'}});
     const {vertices}=result;
     await import('../js/flow-worker.js');
     function pitch(angle){
@@ -45,7 +45,7 @@ test('pitching an uploaded flat plate changes its solved surface pressures',asyn
         mesh[i]=vertices[i]*Math.cos(angle);
         mesh[i+1]=vertices[i]*Math.sin(angle);
       }
-      self.onmessage({data:mesh});
+      self.onmessage({data:{vertices:mesh,angle:0}});
       assert.ok(result.paths.length);
       assert.ok(result.pressure.texels.length);
       return result.loads;

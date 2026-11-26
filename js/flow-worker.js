@@ -29,8 +29,15 @@ function voxelize(vertices) {
     for(let p=0;p<a.length;p+=2)for(let i=Math.ceil(a[p]);i<=Math.floor(a[p+1]);i++)solid[index(i,key%ny,Math.floor(key/ny))]=1}
   return solid;
 }
-self.onmessage=({data})=>{
-  const solid=voxelize(data), phi=new Float32Array(n), masks=new Uint8Array(n), inv=new Float32Array(n),bias=new Float32Array(n);
+self.onmessage=({data:{vertices,angle}})=>{
+  // The worker owns this structured clone. Rotate only the positions here;
+  // normals and bounds stay on the render thread and are never cloned.
+  const cos=Math.cos(angle),sin=Math.sin(angle);
+  for(let i=0;i<vertices.length;i+=3){
+    const x=vertices[i],y=vertices[i+1];
+    vertices[i]=cos*x-sin*y;vertices[i+1]=sin*x+cos*y;
+  }
+  const solid=voxelize(vertices), phi=new Float32Array(n), masks=new Uint8Array(n), inv=new Float32Array(n),bias=new Float32Array(n);
   const offsets=[-1,1,-nx,nx,-slice,slice];
   for(let k=1;k<nz-1;k++)for(let j=1;j<ny-1;j++)for(let i=1;i<nx-1;i++){
     const q=index(i,j,k);if(solid[q])continue;let count=0;

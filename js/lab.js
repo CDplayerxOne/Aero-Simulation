@@ -2,6 +2,7 @@ import * as THREE from '../vendor/three.module.min.js';
 import {OrbitControls} from '../vendor/OrbitControls.js';
 import {pressureMaterial,setPressureField} from './pressure-map.js';
 import {referenceDimensions,telemetry} from './aero-telemetry.js';
+import {maxFileBytes,maxFileMiB,maxTriangles} from './mesh-limits.js';
 const $=id=>document.getElementById(id);
 function airfoil(){
   const profile=[],result=[];
@@ -55,7 +56,7 @@ function start(){
   const flowColor=new THREE.Color();
   function status(){ $('message').textContent=importError||statusText }
   function solve(){
-    solveWorker?.terminate();solveWorker=new Worker(new URL('./flow-worker.js',import.meta.url),{type:'module'});statusText='Computing flow field…';status();const geom=model.geometry.clone().rotateZ(model.rotation.z);
+    solveWorker?.terminate();solveWorker=new Worker(new URL('./flow-worker.js',import.meta.url),{type:'module'});statusText='Computing flow field…';status();
     const job=solveWorker;
     solveWorker.onmessage=e=>{
       if(job!==solveWorker)return;
@@ -72,22 +73,33 @@ function start(){
       dots.geometry.dispose();dots.geometry=new THREE.BufferGeometry();dots.geometry.setAttribute('position',new THREE.BufferAttribute(new Float32Array(3*paths.length*4),3));dots.frustumCulled=false;
       statusText=loads?'Flow field ready':'Flow field ready. No surface resolved for load estimates.';status();solveWorker.terminate();solveWorker=null;
     };solveWorker.onerror=()=>{if(job!==solveWorker)return;statusText='Solver failed. Adjust the angle to retry.';status()};
-    const a=geom.attributes.position.array;solveWorker.postMessage(a,[a.buffer]);geom.dispose();
+    solveWorker.postMessage({vertices:model.geometry.attributes.position.array,angle:model.rotation.z});
   }
   function updateAngle(){loads=null;renderTelemetry();pressureReady=false;syncSurface();model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();solveWorker=null;timer=setTimeout(solve,100)}
-  function setModel(vertices,name){model.geometry.dispose();model.geometry=new THREE.BufferGeometry();model.geometry.setAttribute('position',new THREE.BufferAttribute(vertices,3));model.geometry.computeVertexNormals();model.geometry.computeBoundingBox();
+  function setModel(vertices,name,prepared){
+    model.geometry.dispose();
+    const geometry=new THREE.BufferGeometry().setAttribute('position',new THREE.BufferAttribute(vertices,3));
+    if(prepared){
+      geometry.setAttribute('normal',new THREE.BufferAttribute(prepared.normals,3));
+      geometry.boundingBox=new THREE.Box3().copy(prepared.box);
+      geometry.boundingSphere=new THREE.Sphere().copy(prepared.sphere);
+    }else{
+      geometry.computeVertexNormals();geometry.computeBoundingBox();
+    }
+    model.geometry=geometry;
     reference=referenceDimensions(model.geometry.boundingBox);
     $('refLength').textContent=reference.length.toFixed(2)+' m';
     $('refArea').textContent=reference.area.toFixed(2)+' m²';
     $('meshName').textContent=name;$('triCount').textContent=(vertices.length/9).toLocaleString();updateAngle()}
   function load(file){
     if(!file)return;readWorker?.terminate();readWorker=null;importError='';
-    const type=file.name.toLowerCase().split('.').pop();if(!['stl','obj'].includes(type)||file.size>20*1024*1024){importError='Choose an OBJ or STL file under 20 MB.';status();return}
+    const type=file.name.toLowerCase().split('.').pop();if(!['stl','obj'].includes(type)||file.size>maxFileBytes){importError='Choose an OBJ or STL file no larger than '+maxFileMiB+' MiB.';status();return}
     const worker=new Worker(new URL('./mesh-worker.js',import.meta.url),{type:'module'});readWorker=worker;importError='Reading mesh…';status();
-    worker.onmessage=({data})=>{if(worker!==readWorker)return;worker.terminate();readWorker=null;importError=data.error||'';if(!data.error)setModel(data.vertices,file.name);status()};
-    worker.onerror=()=>{importError='Unable to read the mesh.';status();worker.terminate()};
-    file.arrayBuffer().then(buffer=>{if(worker===readWorker)worker.postMessage({buffer,type},[buffer])}).catch(()=>{importError='Unable to open this file.';status()});
+    worker.onmessage=({data})=>{if(worker!==readWorker)return;worker.terminate();readWorker=null;importError=data.error||'';if(!data.error)setModel(data.vertices,file.name,data);status()};
+    worker.onerror=()=>{if(worker!==readWorker)return;readWorker=null;importError='Unable to read the mesh.';status();worker.terminate()};
+    worker.postMessage({file,type});
   }
+  $('meshLimit').textContent='OBJ or STL · '+maxFileMiB+' MiB · '+maxTriangles.toLocaleString()+' triangles max';
   $('file').onchange=e=>{load(e.target.files[0]);e.target.value=''};
   const drop=$('drop');for(const type of ['dragover','dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.toggle('over',type==='dragover');if(type==='drop')load(e.dataTransfer.files[0])});
   $('angle').oninput=updateAngle;$('speed').oninput=()=>{$('speedValue').value=$('speed').value+' m/s';renderTelemetry()};
