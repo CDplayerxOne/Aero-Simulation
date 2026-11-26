@@ -2,7 +2,7 @@
 
 Groundline is a browser-based racing simulator and aerodynamics lab. Race the open-wheel Formula 22, explore airflow around the same chassis in the wind tunnel, or test your own 3D mesh.
 
-[Open the hosted Groundline site](https://groundline-circuit-lab.cdplayerx1.chatgpt.site). The hosted version requires access to the ChatGPT Site. You can also run the project locally.
+[Play Groundline on Vercel](https://groundline-five.vercel.app)
 
 ![Groundline's lime and navy Formula 22 in the wind tunnel](assets/hero.webp)
 
@@ -11,8 +11,8 @@ Groundline is a browser-based racing simulator and aerodynamics lab. Race the op
 Use a browser with WebGL enabled and a local HTTP server. Three.js and its loaders are included in the repository.
 
 ```sh
-git clone https://github.com/CDplayerxOne/Aero-Simulation.git
-cd Aero-Simulation
+git clone https://github.com/CDplayerxOne/Groundline.git
+cd Groundline
 python3 -m http.server --bind 127.0.0.1 3000
 ```
 
@@ -43,7 +43,7 @@ Hold the phone upright in portrait or landscape and allow motion access. Rotate 
 
 ## Deploy on Vercel
 
-Import this repository with its root as the Vercel project root. The checked-in `vercel.json` builds the static pages into `public/` and routes `/api/pair/*` to a Node function. The garage and wind tunnels work immediately. Phone pairing uses private Vercel Blob storage to share a temporary handshake between the two devices.
+Import this repository with its root as the Vercel project root. The checked-in `vercel.json` runs `node scripts/build-vercel.mjs`, publishes the static pages from `public/`, and routes `/api/pair/*` to a Node function. The garage and wind tunnels work immediately. Phone pairing uses private Vercel Blob storage to share a temporary handshake between the two devices.
 
 Connect a private Blob store in the project's **Storage** tab and redeploy. Apply the connection to **Production**, and optionally **Preview** to pair on preview deployments. Both devices must open the same HTTPS hostname.
 
@@ -61,11 +61,11 @@ Both wind tunnels use simplified potential-flow models for qualitative compariso
 The build and tests were verified with Node.js 24. These commands require no package installation.
 
 ```sh
-node build.mjs
+node scripts/build-vercel.mjs
 node --test tests/*.mjs
 ```
 
-The build embeds the site in a Cloudflare Worker at `dist/server/index.js`. The Worker serves the pages and exchanges WebRTC connection details using the site's R2 bucket. Codes are scoped to the signed-in account and consumed on pairing.
+The Vercel build writes the static site to `public/`. For ChatGPT Sites hosting, `node build.mjs` instead embeds the site in a Cloudflare Worker at `dist/server/index.js`. The Worker exchanges WebRTC connection details using the site's R2 bucket. Codes are scoped to the signed-in account and consumed on pairing.
 
 To test phone pairing locally, run `node build.mjs` and then `npx wrangler dev --config wrangler.dev.jsonc --local --ip 0.0.0.0` on a trusted LAN. Open the laptop's LAN address and the indicated port on both devices. This local configuration uses one shared test player. Use a trusted HTTPS endpoint for tilt on the phone. The Python static server above supports the game and wind tunnels without the pairing API.
 
