@@ -1,5 +1,10 @@
 import {clamp,mod} from './circuits.js';
 const mass=812,wheelbase=3.48,front=1.57,rear=wheelbase-front,gravity=9.81,ratios=[3.85,3.02,2.48,2.08,1.79,1.55,1.36,1.21];
+// Keep parking lock at low speed. At race pace, a full input asks for
+// near-limit cornering plus the tire slip angle needed to generate that force.
+function steeringLock(speed){
+ return Math.min(.55,.09+Math.atan(wheelbase*15/Math.max(1,speed*speed)));
+}
 export function makeDriver(track,s,lane,number){
  const p=track.sample(s,lane);return {x:p.x,z:p.z,heading:Math.atan2(p.tx,p.tz),speed:0,side:0,omega:0,steer:0,gear:0,rpm:1050,shift:0,acc:0,latAcc:0,
  progress:s,lap:0,best:Infinity,lastLap:0,lapStart:0,finished:false,finishTime:Infinity,number,lane,offset:lane,index:Math.floor(mod(s,track.length)/track.ds),surface:p,wheel:0,braking:0,throttle:0,handbrake:0};
@@ -8,7 +13,10 @@ export function advance(c,input,track,dt){
  const v=c.speed,abs=Math.abs(v),off=Math.abs(c.offset)>track.width+.65;
  const mu=off?.57:1.29,load=mass*gravity+2.5*v*v,transfer=clamp(c.acc*mass*.30/wheelbase,-2100,2100);
  const fzF=load*rear/wheelbase-transfer,fzR=load*front/wheelbase+transfer;
- c.steer+=(input.steer*(.55/(1+abs*.013))-c.steer)*(1-Math.exp(-dt*7.8));
+ const normalLock=steeringLock(abs);
+ const driftLock=.55/(1+abs*.013);
+ const lock=normalLock+c.handbrake*(driftLock-normalLock);
+ c.steer+=(input.steer*lock-c.steer)*(1-Math.exp(-dt*7.8));
  c.shift=Math.max(0,c.shift-dt);
  const wheelRpm=abs/.365*60/(2*Math.PI)*4.05;
  c.rpm=clamp(wheelRpm*ratios[c.gear],3200,12500);
@@ -21,7 +29,12 @@ export function advance(c,input,track,dt){
  c.handbrake+=(lockTarget-c.handbrake)*(1-Math.exp(-dt*(lockTarget?9:4)));
  const rearLimit=mu*fzR*(1-.32*c.handbrake);
  const rearDrive=drive*(1-c.handbrake);
- const rearLong=clamp(rearDrive-dir*(brake*.38+c.handbrake*rearLimit*.94),-rearLimit*.96,rearLimit*.85);
+ // Reserve lateral tire capacity under power and trail braking. Use both the
+ // requested turn and the current lateral load so unwinding the wheel is smooth.
+ const cornerDemand=clamp(Math.max(Math.abs(v*v*Math.tan(c.steer)/wheelbase),Math.abs(c.latAcc))/(mu*load/mass),0,1);
+ const driveLimit=rearLimit*(.85-.42*cornerDemand);
+ const brakeLimit=rearLimit*(.96-.40*cornerDemand*(1-c.handbrake));
+ const rearLong=clamp(rearDrive-dir*(brake*.38+c.handbrake*rearLimit*.94),-brakeLimit,driveLimit);
  const denom=Math.max(4,abs),slipF=c.steer-Math.atan2(c.side+front*c.omega,denom),slipR=-Math.atan2(c.side-rear*c.omega,denom);
  const gripF=Math.sqrt(Math.max(0,(fzF*mu)**2-frontLong**2)),gripR=Math.sqrt(Math.max(0,rearLimit**2-rearLong**2));
  const fyF=gripF*Math.tanh(85000*slipF/Math.max(1,gripF)),fyR=gripR*Math.tanh(94000*slipR/Math.max(1,gripR));
@@ -32,9 +45,11 @@ export function advance(c,input,track,dt){
  c.speed=clamp(v+dt*(c.acc+c.omega*c.side),0,88);
  c.side+=dt*(c.latAcc-c.omega*v);c.omega+=dt*(front*yf-rear*fyR)/1800;
  if(abs<6){const mix=(1-abs/6)*Math.min(1,dt*22);c.omega+=(v*Math.tan(c.steer)/wheelbase-c.omega)*mix;c.side*=1-mix}
- // Electronic stability control applies a corrective yaw moment as sideslip grows.
- const yawLimit=mu*gravity/Math.max(5,abs),desiredYaw=clamp(v*Math.tan(c.steer)/wheelbase,-yawLimit,yawLimit);
- const sideslip=Math.abs(Math.atan2(c.side,denom)),assist=(1.6+clamp(sideslip*18,0,8))*(1-.78*c.handbrake);
+ // When the tail steps out, bring yaw back toward the turn rate supported
+ // by the tires. The handbrake progressively releases this assistance.
+ const sideslip=Math.atan2(c.side,denom);
+ const desiredYaw=c.latAcc/denom+2.6*sideslip;
+ const assist=clamp((Math.abs(sideslip)-.025)*40,0,8)*(1-c.handbrake);
  c.omega+=(desiredYaw-c.omega)*(1-Math.exp(-dt*assist));
  c.heading+=c.omega*dt;const sin=Math.sin(c.heading),cos=Math.cos(c.heading);
  c.x+=dt*(sin*c.speed+cos*c.side);c.z+=dt*(cos*c.speed-sin*c.side);c.wheel+=c.speed*dt/.365;
@@ -58,7 +73,7 @@ export function aiControl(c,track,field){
  const ahead=field.find(other=>other!==c&&other.progress>c.progress&&other.progress-c.progress<23&&Math.abs(other.offset-c.offset)<2.35);
  if(ahead)lane=clamp(ahead.offset+(ahead.offset>0?-3.2:3.2),-4.8,4.8);
  const target=track.sample(c.progress+look,lane),angle=Math.atan2(target.x-c.x,target.z-c.z)-c.heading;
- const steer=clamp(Math.atan(2*wheelbase*Math.sin(angle)/look)/(.55/(1+v*.013))*1.18-c.omega*.035,-1,1);
+ const steer=clamp(Math.atan(2*wheelbase*Math.sin(angle)/look)/steeringLock(v)*1.18-c.omega*.035,-1,1);
  let targetSpeed=73;
  for(let d=0;d<=135;d+=9){const p=track.sample(c.progress+d),corner=Math.sqrt((9.25+c.number*.12)/Math.max(.001,Math.abs(p.k)));targetSpeed=Math.min(targetSpeed,Math.sqrt(corner**2+2*6.9*d))}
  if(Math.abs(c.offset)>track.width)targetSpeed=Math.min(targetSpeed,22);
