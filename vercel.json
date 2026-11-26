@@ -1,0 +1,9 @@
+{
+  "framework": null,
+  "buildCommand": "node scripts/build-vercel.mjs",
+  "outputDirectory": "public",
+  "cleanUrls": true,
+  "rewrites": [
+    {"source": "/api/pair/:action", "destination": "/api/pair?action=:action"}
+  ]
+}

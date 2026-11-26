@@ -68,7 +68,7 @@ el('joinForm').onsubmit=async event=>{
   let session;
   try{
     session=new RTCPeerConnection({iceServers:[]});peer=session;
-    const {offer}=await signal('join',{code});
+    const {offer,ticket}=await signal('join',{code});
     if(peer!==session)return;
     session.ondatachannel=e=>{
       if(peer!==session)return;channel=e.channel;
@@ -85,7 +85,7 @@ el('joinForm').onsubmit=async event=>{
     await remoteDescription(session,'offer',offer);
     const answer=await localDescription(session,'answer');
     if(peer!==session)return;
-    await signal('answer',{code,answer});
+    await signal('answer',{code,answer,ticket});
     if(peer!==session||channel?.readyState==='open')return;
     el('pairHelp').textContent='Connecting to your laptop…';
     connectionTimer=setTimeout(()=>{if(peer===session)disconnected('Could not connect. Check that both devices share the same Wi-Fi, then get a new code.')},25000);

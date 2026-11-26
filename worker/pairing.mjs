@@ -1,7 +1,7 @@
 // Each signed-in player can have one pending pairing and any number of active
 // direct connections. The object contains only the offer/answer handshake.
-const lifetime=5*60*1000;
-const validDescription=s=>typeof s==='string' && /^GL1-[ZT][\w-]{20,24000}$/.test(s);
+export const lifetime=5*60*1000;
+export const validDescription=s=>typeof s==='string' && /^GL1-[ZT][\w-]{20,24000}$/.test(s);
 const reply=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'no-store'}});
 const failure=(message,status)=>reply({error:message},status);
 const inactive=()=>failure('Code expired or replaced. Choose Pair phone on the laptop for a fresh code.',410);
