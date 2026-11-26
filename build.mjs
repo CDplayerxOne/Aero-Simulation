@@ -17,7 +17,8 @@ async function directory(path){
 }
 for(const item of await readdir('.'))if(['.html','.css','.svg'].includes(extname(item)))await pack(item);
 for(const dir of ['assets','js','vendor'])await directory(dir);
-const api=await readFile('worker/pairing.mjs','utf8');
+// The standalone Worker exposes only its fetch handler as an entry point.
+const api=(await readFile('worker/pairing.mjs','utf8')).replace(/^export /gm,'');
 const site=await readFile('worker/site.mjs','utf8');
 await mkdir('dist/server',{recursive:true});
 await writeFile('dist/server/index.js',api+'\nconst assets='+JSON.stringify(assets)+';\n'+site);
