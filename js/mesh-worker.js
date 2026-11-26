@@ -1,22 +1,25 @@
 import {BufferAttribute,BufferGeometry} from '../vendor/three.module.min.js';
 import {readMesh} from './mesh-reader.js';
 
-const previewTriangles=12000;
+const previewTriangles=6000;
+const exactPreviewThreshold=12000;
+const maxPreviewTriangles=24000;
+const legacyTriangles=350000;
 
 async function makePreview(vertices){
-  if(vertices.length<=previewTriangles*9)return null;
+  if(vertices.length<=exactPreviewThreshold*9)return null;
   const {MeshoptSimplifier}=await import('../vendor/meshopt_simplifier.js');
-  if(!MeshoptSimplifier.supported && vertices.length<=9*350000)return null;
+  if(!MeshoptSimplifier.supported && vertices.length<=9*legacyTriangles)return null;
   if(!MeshoptSimplifier.supported)throw Error('This mesh needs WebAssembly for its interactive preview.');
   await MeshoptSimplifier.ready;
   const indices=new Uint32Array(vertices.length/3);
   for(let i=0;i<indices.length;i++)indices[i]=i;
   // Allow a display error of 2% of the fitted extent, half a solver cell.
   const [reduced]=MeshoptSimplifier.simplifySloppy(indices,vertices,3,null,previewTriangles*3,.02);
-  if(!reduced.length||reduced.length>previewTriangles*6){
+  if(!reduced.length||reduced.length>maxPreviewTriangles*3){
     // Some disconnected shapes cannot be reduced faithfully. Keep previously
     // supported originals, and avoid silently losing the shape on dense uploads.
-    if(vertices.length<=9*350000)return null;
+    if(vertices.length<=9*legacyTriangles)return null;
     throw Error('This mesh is too detailed for an interactive preview. Simplify it and try again.');
   }
   if(reduced.length>=indices.length)return null;

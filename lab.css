@@ -1,4 +1,12 @@
 .lab-page { display: flex; flex-direction: column; min-height: 100dvh; }
+/* Repainting backdrop blur over a moving WebGL canvas is expensive on
+   integrated and software renderers. Use the site's opaque glass finish. */
+.lab-page .glass {
+  --glass-top: #20354c;
+  --glass-base: #18283b;
+  -webkit-backdrop-filter: none;
+  backdrop-filter: none;
+}
 .lab {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(280px, 328px);

@@ -66,3 +66,14 @@ test('dense display geometry is reduced independently of the full fitted mesh',a
     assert.ok(Math.abs(result.box.max.x-result.box.min.x-3.05)<1e-5);
   }finally{delete globalThis.self}
 });
+
+test('pathological overlap stops before unbounded raster work and hit storage',async()=>{
+  const vertices=new Float32Array(9*4000);
+  for(let i=0;i<vertices.length;i+=9)vertices.set([0,-1.5,-1.5,0,1.5,-1.5,0,0,1.5],i);
+  let result;globalThis.self={postMessage(data){result=data}};
+  try{
+    await import('../js/flow-worker.js');
+    self.onmessage({data:{vertices,angle:0}});
+    assert.match(result.error,/overlapping faces/);
+  }finally{delete globalThis.self}
+});

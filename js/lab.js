@@ -21,6 +21,8 @@ function start(){
   const fullPixelRatio=Math.min(devicePixelRatio,1.7);
   renderer.setPixelRatio(fullPixelRatio);const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.08,100);
   const controls=new OrbitControls(camera,renderer.domElement);controls.enableDamping=true;controls.minDistance=3;controls.maxDistance=17;controls.enablePan=false;
+  let needsRender=true;
+  controls.addEventListener('change',()=>{needsRender=true});
   function resetView(){camera.position.set(4.8,2.5,7.8);controls.target.set(0,0,0);controls.update()}
   resetView();$('reset').onclick=resetView;
   scene.add(new THREE.HemisphereLight(0xe7f8ff,0x51647d,2.1));const sun=new THREE.DirectionalLight(0xddeeff,3.3);sun.position.set(-4,6,2);scene.add(sun);
@@ -44,6 +46,7 @@ function start(){
     $('cl').textContent=format(values.cl,3);
   }
   function syncSurface(){
+    needsRender=true;
     const show=pressureReady && $('heat').checked;
     model.material=show?heat:mat;
     model.material.wireframe=$('wire').checked;
@@ -79,7 +82,7 @@ function start(){
     };solveWorker.onerror=()=>{if(job!==solveWorker)return;statusText='Solver failed. Adjust the angle to retry.';status()};
     solveWorker.postMessage({vertices:simulationVertices,angle:model.rotation.z});
   }
-  function updateAngle(){loads=null;renderTelemetry();pressureReady=false;syncSurface();model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();solveWorker=null;timer=setTimeout(solve,100)}
+  function updateAngle(){statusText='Computing flow field…';status();loads=null;renderTelemetry();pressureReady=false;syncSurface();model.rotation.z=-Number($('angle').value)*Math.PI/180;$('angleValue').value=$('angle').value+'°';line.geometry.setDrawRange(0,0);dots.geometry.setDrawRange(0,0);clearTimeout(timer);solveWorker?.terminate();solveWorker=null;timer=setTimeout(solve,100)}
   function setModel(vertices,name,prepared){
     model.geometry.dispose();
     simulationVertices=vertices;
@@ -112,14 +115,18 @@ function start(){
   $('file').onchange=e=>{load(e.target.files[0]);e.target.value=''};
   const drop=$('drop');for(const type of ['dragover','dragleave','drop'])drop.addEventListener(type,e=>{e.preventDefault();drop.classList.toggle('over',type==='dragover');if(type==='drop')load(e.dataTransfer.files[0])});
   $('angle').oninput=updateAngle;$('speed').oninput=()=>{$('speedValue').value=$('speed').value+' m/s';renderTelemetry()};
-  $('heat').onchange=syncSurface;$('wire').onchange=syncSurface;$('traces').onchange=e=>{dots.visible=line.visible=e.target.checked};$('pause').onclick=()=>{running=!running;$('pause').textContent=running?'Pause flow':'Resume flow'};
+  $('heat').onchange=syncSurface;$('wire').onchange=syncSurface;$('traces').onchange=e=>{dots.visible=line.visible=e.target.checked;needsRender=true};$('pause').onclick=()=>{running=!running;$('pause').textContent=running?'Pause flow':'Resume flow'};
   setModel(airfoil(),'Reference airfoil');const clock=new THREE.Clock();
-  new ResizeObserver(()=>{const el=renderer.domElement;renderer.setSize(el.clientWidth,el.clientHeight,false);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix()}).observe(renderer.domElement);
+  new ResizeObserver(()=>{needsRender=true;const el=renderer.domElement;renderer.setSize(el.clientWidth,el.clientHeight,false);camera.aspect=el.clientWidth/el.clientHeight;camera.updateProjectionMatrix()}).observe(renderer.domElement);
   // Sustained slow frames lower only the canvas resolution. HTML controls and
   // the solver retain their full resolution, including on high-DPI phones.
   let slowTime=0,fastTime=0;
   renderer.setAnimationLoop(()=>{
     const elapsed=clock.getDelta(),dt=Math.min(.06,elapsed);
+    controls.update();
+    const animate=pressureReady && dots.visible && running && !readWorker;
+    // While a local import or solve runs, orbiting and UI changes still redraw.
+    if(!needsRender && !animate){slowTime=0;fastTime=0;return}
     if(document.hidden || elapsed>1){slowTime=0;fastTime=0}
     else if(elapsed>.033){slowTime+=elapsed;fastTime=0}
     else if(elapsed<.021){fastTime+=elapsed;slowTime=0}
@@ -130,7 +137,7 @@ function start(){
       if(current!==next)renderer.setPixelRatio(next);
       slowTime=0;fastTime=0;
     }
-    if(running)phase+=dt*Number($('speed').value)*.65;
+    if(animate)phase+=dt*Number($('speed').value)*.65;
     const pos=dots.geometry.attributes.position;
     if(pos && dots.visible){
       paths.forEach((path,j)=>{
@@ -142,7 +149,7 @@ function start(){
       });
       pos.needsUpdate=true;
     }
-    controls.update();
+    needsRender=false;
     renderer.render(scene,camera);
   });
 }
