@@ -30,11 +30,14 @@ function start(){
   function renderTelemetry(){
     const speed=Number($('speed').value);
     const values=telemetry(speed,reference,loads);
-    const format=(value,digits)=>value===null?'—':Number(value.toFixed(digits)).toLocaleString(undefined,{maximumFractionDigits:digits});
+    const format=(value,digits)=>value===null?'—':(Number(value.toFixed(digits))||0).toLocaleString(undefined,{maximumFractionDigits:digits});
     $('pressure').textContent=format(values.pressure,0);
     $('reynolds').textContent=values.reynolds===null?'—':format(values.reynolds/1e6,3);
     $('drag').textContent=format(values.drag,1);
     $('lift').textContent=format(values.lift,1);
+    $('minCp').textContent=format(values.minCp,2);
+    $('maxCp').textContent=format(values.maxCp,2);
+    $('peakSpeed').textContent=format(values.peakSpeed,1);
     $('cd').textContent=format(values.cd,3);
     $('cl').textContent=format(values.cl,3);
   }
