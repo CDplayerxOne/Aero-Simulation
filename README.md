@@ -35,9 +35,11 @@ Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or No
 Touch devices get on-screen steering, throttle, brake, and drift controls. Open **Controls** in the garage or during a race to adjust steering sensitivity.
 
 ### Pair a phone
-Choose **Pair phone** in the garage (or **Controls → Phone controller** during a race). Use the same Wi-Fi network on both devices. Scan the link with the phone or open its copied URL, sign in to the private site if prompted, and tap **Pair phone**. Show the phone’s return QR to the computer using **Scan phone code**, or transfer and paste its return code. Steering and button inputs then travel over a direct WebRTC data channel.
+1. On the laptop, open the garage and choose **Pair phone**. A six-digit code appears for five minutes.
+2. On the phone, open the Groundline home page and choose **Phone controller**. Enter the six digits and tap **Pair phone**. Scanning the laptop's QR with the phone also fills in the code.
+3. When both screens say **Connected**, you can drive. Use the same Wi-Fi and the same signed-in ChatGPT account on both devices. Controls travel directly over WebRTC.
 
-Hold the phone upright in portrait or landscape and allow motion access. Rotate it like a steering wheel and use **Recenter** for a comfortable neutral position. Touch steering is available alongside throttle, brake, drift, camera, recovery and race controls. Pair over HTTPS for camera and motion access. Guest networks with client isolation can prevent a direct connection.
+Hold the phone upright in portrait or landscape and allow motion access. Rotate it like a steering wheel and use **Recenter** for a comfortable neutral position. Touch steering is available alongside throttle, brake, drift, camera, recovery and race controls. Use HTTPS for motion access. Guest networks with client isolation can prevent a direct connection.
 
 ## Explore airflow
 
@@ -52,10 +54,12 @@ The build and tests were verified with Node.js 24. These commands require no pac
 
 ```sh
 node build.mjs
-node --test tests/driving.mjs
+node --test tests/*.mjs
 ```
 
-The build copies the site into `dist/` for static hosting. The driving tests cover car-to-car contact, glancing rail impacts, and handbrake-induced sideslip.
+The build embeds the site in a Cloudflare Worker at `dist/server/index.js`. The Worker serves the pages and exchanges WebRTC connection details using the site's R2 bucket. Codes are scoped to the signed-in account and consumed on pairing.
+
+To test phone pairing locally, run `node build.mjs` and then `npx wrangler dev --config wrangler.dev.jsonc --local --ip 0.0.0.0` on a trusted LAN. Open the laptop's LAN address and the indicated port on both devices. This local configuration uses one shared test player. Use a trusted HTTPS endpoint for tilt on the phone. The Python static server above supports the game and wind tunnels without the pairing API.
 
 ## Project layout
 

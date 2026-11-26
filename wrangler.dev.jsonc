@@ -1,0 +1,7 @@
+{
+  "name": "groundline-local",
+  "main": "dist/server/index.js",
+  "compatibility_date": "2025-06-01",
+  "r2_buckets": [{"binding":"BUCKET","bucket_name":"groundline-local-pairing"}],
+  "vars": {"LOCAL_PLAYER":"local-driver"}
+}

@@ -3,7 +3,7 @@ export default {
   async fetch(request,env){
     const url=new URL(request.url);
     if(url.pathname.startsWith('/api/pair/')){
-      try{return await pairing(request,env.BUCKET,request.headers.get('oai-authenticated-user-id'))}
+      try{return await pairing(request,env.BUCKET,env.LOCAL_PLAYER || request.headers.get('oai-authenticated-user-id'))}
       catch{return Response.json({error:'Pairing service is temporarily unavailable. Try again.'},{status:503,headers:{'Cache-Control':'no-store'}})}
     }
     if(request.method!=='GET'&&request.method!=='HEAD')return new Response('Method not allowed',{status:405});
