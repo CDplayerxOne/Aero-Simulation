@@ -1,0 +1,11 @@
+body {min-height:100dvh;background:var(--tunnel-background)}
+.handset {width:min(100% - 28px,740px);margin:auto;padding:12px 0 max(14px,env(safe-area-inset-bottom))}
+.handset header,.utility,.manual {display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.handset header {justify-content:space-between;margin-bottom:12px}.handset header span{color:var(--accent);font-weight:650}
+.phone-panel {padding:clamp(15px,3vw,26px)}.phone-panel h1,.phone-panel h2{margin:0;font:650 1.6rem var(--display)}
+.phone-panel p {color:var(--muted);margin:8px 0 14px}.phone-panel input,.phone-panel textarea{width:100%;margin:7px 0;padding:8px;color:var(--text);background:var(--night);border:1px solid var(--edge-line);border-radius:8px}
+#reply{margin-top:18px}#returnQr{display:block;width:min(100%,300px);height:auto;image-rendering:pixelated;margin:auto}
+.wheel-meter{position:relative;height:8px;background:#51667a;border-radius:8px;margin:19px 10px}.wheel-meter:before{content:"";position:absolute;left:50%;height:100%;width:1px;background:white}.wheel-meter i{position:absolute;left:50%;transform:translate(-50%,-4px);width:16px;height:16px;border-radius:50%;background:var(--accent)}
+.pedals{display:grid;grid-template-columns:1fr .85fr 1.3fr;gap:10px;margin:16px 0 10px}.pedals button{min-height:clamp(72px,19vh,140px);border:1px solid var(--highlight-line);border-radius:19px;background:#243a50;color:var(--text);font:650 1.15rem var(--display)}
+.pedals [data-hold=gas]{background:#a7ddd9;color:#19343a}.pedals [data-hold=brake]{background:#7b4744}.handset [data-hold]{touch-action:none;user-select:none;-webkit-user-select:none;-webkit-touch-callout:none}.handset [data-hold].held{box-shadow:inset 0 0 0 3px white;filter:brightness(1.2)}
+@media(orientation:landscape) and (max-height:500px){.handset{padding-top:5px}.handset header{margin-bottom:4px}.handset .wordmark{font-size:1.1rem}.handset .wordmark img{width:23px;height:23px}#pad h1{display:none}.utility .button,.manual .button{min-height:36px;padding:5px 12px}.pedals{margin:8px 0}.wheel-meter{margin:10px}.phone-panel{padding:12px}.phone-panel p{margin:4px 0 8px}}

@@ -34,6 +34,11 @@ Open the [race garage](drive.html) and choose Sierra Vista, Copper Canyon, or No
 
 Touch devices get on-screen steering, throttle, brake, and drift controls. Open **Controls** in the garage or during a race to adjust steering sensitivity.
 
+### Pair a phone
+Choose **Pair phone** in the garage (or **Controls → Phone controller** during a race). Use the same Wi-Fi network on both devices. Scan the link with the phone or open its copied URL, sign in to the private site if prompted, and tap **Pair phone**. Show the phone’s return QR to the computer using **Scan phone code**, or transfer and paste its return code. Steering and button inputs then travel over a direct WebRTC data channel.
+
+Hold the phone upright in portrait or landscape and allow motion access. Rotate it like a steering wheel and use **Recenter** for a comfortable neutral position. Touch steering is available alongside throttle, brake, drift, camera, recovery and race controls. Pair over HTTPS for camera and motion access. Guest networks with client isolation can prevent a direct connection.
+
 ## Explore airflow
 
 - **[Wind tunnel demo](wind-tunnel.html)** — Adjust air speed, yaw, and rear wing incidence. Inspect streamlines, estimated surface pressure, and undertray tracers. The telemetry panel shows Reynolds number, lift and drag coefficients, and estimates of drag and downforce. Turn on the **Aerodynamics guide** to explore parts of the car.

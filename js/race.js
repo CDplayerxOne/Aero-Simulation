@@ -1,6 +1,7 @@
 import * as T from '../vendor/three.module.min.js';
 import {circuits,makeCircuit,clamp,mod} from './circuits.js';
 import {makeDriver,advance,aiControl,carContacts} from './dynamics.js';
+import {createControllerHost} from './controller-host.js';
 import {createRaceAudio} from './race-audio.js';
 import {raceCar,numbers,loadRaceCar} from './models.js';
 import {buildWorld,disposeWorld} from './world.js';
@@ -96,6 +97,34 @@ slider.oninput=()=>{
  sensitivity=Number(slider.value);displaySensitivity();
  try{localStorage.setItem('groundline.steering',slider.value)}catch{}
 };
+const phone=createControllerHost({
+  getMode:()=>mode,
+  onLoss:()=>{if(mode==='racing')pause()},
+  onAction(action){
+    if(document.hidden||!cars.length)return;
+    if(action==='garage'&&mode==='garage'){
+      if(controlsDialog.open){launchAfterControls=true;controlsDialog.close('done')}
+      else {briefed=true;begin()}
+      return;
+    }
+    if(controlsDialog.open){
+      if(action==='paused'&&mode==='paused')controlsDialog.close('done');
+      return;
+    }
+    if(action==='finished'&&mode==='finished')setup(active);
+    else if(action==='paused'&&mode==='paused')resume();
+    else if(action===mode && ['intro','countdown','racing'].includes(mode))pause();
+    else if(action==='camera'&&mode==='racing'){closeCamera=!closeCamera;updateCamera(1,true)}
+    else if(action==='recover'&&mode==='racing')recover();
+  }
+});
+$('garagePair').onclick=()=>{
+  openControls();
+  $('phoneDetails').open=true;
+  if(!$('makePair').hidden)$('makePair').click();
+  $('phoneDetails').scrollIntoView({block:'nearest'});
+};
+$('phoneDetails').ontoggle=()=>{if(!$('phoneDetails').open)phone.stopCamera()};
 function openControls(launch=false){
  if(controlsDialog.open)return;
  launchAfterControls=launch;
@@ -107,6 +136,7 @@ function openControls(launch=false){
 $('controlsButton').onclick=()=>openControls();
 $('controlsDone').onclick=()=>controlsDialog.close('done');
 controlsDialog.onclose=()=>{
+ phone.stopCamera();
  const confirmed=controlsDialog.returnValue==='done';
  if(confirmed)briefed=true;
  if(launchAfterControls&&confirmed)begin();
@@ -135,7 +165,13 @@ function step(dt){
  if(mode!=='racing')return;
  elapsed+=dt;if(elapsed>1.35&&!$('banner').hidden)banner('');
  const steering=Number(keys.has('ArrowLeft')||keys.has('KeyA'))-Number(keys.has('ArrowRight')||keys.has('KeyD'));
- const playerInput={gas:+(keys.has('ArrowUp')||keys.has('KeyW')),brake:+(keys.has('ArrowDown')||keys.has('KeyS')),steer:steering*sensitivity/100,handbrake:keys.has('Space')};
+ const remote=phone.current();
+ const playerInput={
+   gas:Number(keys.has('ArrowUp')||keys.has('KeyW')||remote.gas),
+   brake:Number(keys.has('ArrowDown')||keys.has('KeyS')||remote.brake),
+   steer:(steering||remote.steer)*sensitivity/100,
+   handbrake:keys.has('Space')||remote.drift
+ };
  for(const c of cars){
    const before=c.progress;advance(c,c.number||c.finished?aiControl(c,track,cars):playerInput,track,dt);
    if(!c.finished&&c.progress>=(c.lap+1)*track.length){const fraction=clamp(((c.lap+1)*track.length-before)/Math.max(.0001,c.progress-before),0,1),crossing=elapsed-dt+dt*fraction;
@@ -156,6 +192,6 @@ addEventListener('keyup',e=>keys.delete(e.code));addEventListener('blur',pause);
 for(const b of document.querySelectorAll('[data-key]')){b.onpointerdown=e=>{e.preventDefault();b.setPointerCapture(e.pointerId);keys.add(b.dataset.key);b.classList.add('held')};const release=()=>{keys.delete(b.dataset.key);b.classList.remove('held')};b.onpointerup=b.onpointercancel=b.onlostpointercapture=release}
 function frame(stamp){const dt=prevStamp?Math.min(.12,(stamp-prevStamp)/1000):0;prevStamp=stamp;
  if(mode!=='paused'&&mode!=='finished'){accumulator+=dt;while(accumulator>=1/120){step(1/120);accumulator-=1/120}updateCamera(dt);hudTimer+=dt;if(hudTimer>.09&&!$('racehud').hidden){updateHud();hudTimer=0}}
- updateAudio();renderer.render(world.scene,camera)}
+ phone.sync();updateAudio();renderer.render(world.scene,camera)}
 try{renderer=new T.WebGLRenderer({canvas:$('world'),antialias:true,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,1.5));camera=new T.PerspectiveCamera(57,1,.08,2600);await loadRaceCar();setup(0);$('start').disabled=false;$('start').textContent='Start race';document.querySelectorAll('.track').forEach(button=>button.disabled=false);addEventListener('resize',resize);renderer.setAnimationLoop(frame)}
 catch(error){console.error(error);$('garage').hidden=true;$('raceError').hidden=false;$('raceError').textContent='The racing renderer could not start. Enable WebGL and hardware acceleration, then reload the garage.'}
