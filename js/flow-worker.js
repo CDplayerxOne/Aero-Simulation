@@ -8,6 +8,7 @@ function voxelize(vertices) {
   // Rasterize the triangle surface on all three projections to capture thin sheets.
   // Paired intersections along x additionally fill closed volumes.
   const origin=[x0,y0,z0], size=[nx,ny,nz];
+  let remainingChecks=2000000;
   for(let f=0;f<vertices.length;f+=9) for(let axis=0;axis<3;axis++){
     const u=(axis+1)%3,v=(axis+2)%3;
     const a=vertices[f+u], b=vertices[f+v], du=vertices[f+3+u]-a,dv=vertices[f+3+v]-b;
@@ -17,6 +18,9 @@ function voxelize(vertices) {
     const uMax=Math.min(size[u]-2,Math.floor((a+Math.max(0,du,eu)-origin[u])/h));
     const vMin=Math.max(1,Math.ceil((b+Math.min(0,dv,ev)-origin[v])/h));
     const vMax=Math.min(size[v]-2,Math.floor((b+Math.max(0,dv,ev)-origin[v])/h));
+    if(uMax<uMin||vMax<vMin)continue;
+    remainingChecks-=(uMax-uMin+1)*(vMax-vMin+1);
+    if(remainingChecks<0)return null;
     for(let j=vMin;j<=vMax;j++)for(let i=uMin;i<=uMax;i++){
       const p=origin[u]+i*h-a,q=origin[v]+j*h-b,s=(p*ev-q*eu)/det,t=(du*q-dv*p)/det;
       if(s < -1e-6 || t < -1e-6 || s+t>1.000001)continue;
@@ -37,7 +41,12 @@ self.onmessage=({data:{vertices,angle}})=>{
     const x=vertices[i],y=vertices[i+1];
     vertices[i]=cos*x-sin*y;vertices[i+1]=sin*x+cos*y;
   }
-  const solid=voxelize(vertices), phi=new Float32Array(n), masks=new Uint8Array(n), inv=new Float32Array(n),bias=new Float32Array(n);
+  const solid=voxelize(vertices);
+  if(!solid){
+    self.postMessage({error:'Too many overlapping faces at this angle. Simplify the mesh or change the angle.'});
+    return;
+  }
+  const phi=new Float32Array(n), masks=new Uint8Array(n), inv=new Float32Array(n),bias=new Float32Array(n);
   const offsets=[-1,1,-nx,nx,-slice,slice];
   for(let k=1;k<nz-1;k++)for(let j=1;j<ny-1;j++)for(let i=1;i<nx-1;i++){
     const q=index(i,j,k);if(solid[q])continue;let count=0;

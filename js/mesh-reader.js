@@ -36,23 +36,23 @@ async function textRecords(file,delimiter,consume){
     let start=0,match;
     while((match=delimiter.exec(text))){
       if(match.index-start>maxRecord)throw Error('Mesh text record is too long.');
-      consume(text.slice(start,match.index));
+      consume(text.slice(start,match.index),true);
       start=delimiter.lastIndex;
     }
     tail=text.slice(start);
     if(tail.length>maxRecord)throw Error('Mesh text record is too long.');
   }
-  if(tail)consume(tail);
+  if(tail)consume(tail,false);
 }
 
 async function readOBJ(file){
   const positions=new Coordinates(),faces=new Coordinates();
   let continued='';
-  await textRecords(file,/\r\n|[\r\n]/g,line=>{
+  await textRecords(file,/\r\n|\n|\r(?=[^\n])/g,line=>{
     line=line.split('#',1)[0].trim();
     if(continued){line=continued+line;continued=''}
+    if(line.length>maxRecord)throw Error('Mesh text record is too long.');
     if(line.endsWith('\\')){
-      if(line.length>maxRecord)throw Error('Mesh text record is too long.');
       continued=line.slice(0,-1)+' ';return;
     }
     if(/^v\s/.test(line)){
@@ -98,8 +98,9 @@ async function readSTL(file){
     return vertices;
   }
   const faces=new Coordinates();
-  await textRecords(file,/\bendfacet\b/gi,record=>{
+  await textRecords(file,/\bendfacet\b/gi,(record,complete)=>{
     if(!/\bfacet\s/i.test(record))return;
+    if(!complete)throw Error('Incomplete STL facet.');
     if(faces.length/9>=maxTriangles)throw Error(triangleLimitMessage());
     let count=0;
     for(const m of record.matchAll(/\bvertex\s+(\S+)\s+(\S+)\s+(\S+)/gi)){

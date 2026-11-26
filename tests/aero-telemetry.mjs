@@ -40,12 +40,7 @@ test('pitching an uploaded flat plate changes its solved surface pressures',asyn
     const {vertices}=result;
     await import('../js/flow-worker.js');
     function pitch(angle){
-      const mesh=vertices.slice();
-      for(let i=0;i<mesh.length;i+=3){
-        mesh[i]=vertices[i]*Math.cos(angle);
-        mesh[i+1]=vertices[i]*Math.sin(angle);
-      }
-      self.onmessage({data:{vertices:mesh,angle:0}});
+      self.onmessage({data:{vertices:vertices.slice(),angle}});
       assert.ok(result.paths.length);
       assert.ok(result.pressure.texels.length);
       return result.loads;
