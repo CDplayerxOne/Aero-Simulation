@@ -174,13 +174,12 @@ input[type=range]::-moz-range-thumb { width: 12px; height: 12px; border: 1px sol
 .telemetry { width: 100%; padding: 9px 13px 12px; pointer-events: auto; }
 .tele-head { display: flex; align-items: center; gap: 7px; min-height: 29px; margin-bottom: 5px; }
 .tele-head .section-top h2 { font-size: 16px; }
-.tele-head > span { margin-left: auto; color: var(--muted); font-size: 11px; }
+.tele-head .physics-link { margin-left: auto; color: var(--accent); font-size: 12px; text-underline-offset: 3px; }
 .tele-head button, dialog button { display: grid; place-items: center; width: 34px; height: 30px; border-radius: 99px; color: #deedf7; }
 .tele-head button .icon { width: 19px; }
 .tele-head button[aria-expanded="false"] .icon { transform: rotate(180deg); }
-.telemetry:has(.metrics[hidden]) { width: max-content; padding: 4px 6px 4px 12px; border-radius: 999px; }
+.telemetry:has(.metrics[hidden]) { width: max-content; max-width: 100%; padding: 4px 6px 4px 12px; border-radius: 999px; }
 .telemetry:has(.metrics[hidden]) .tele-head { margin: 0; }
-.telemetry:has(.metrics[hidden]) .tele-head > span { display: none; }
 .metrics { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .metric { min-width: 0; border-left: 1px solid var(--edge-line); padding: 0 clamp(6px, 1vw, 15px); }
 .metric:first-child { border-left: 0; padding-left: 0; }
@@ -338,7 +337,7 @@ dialog button { float: right; }
 </div>
 <div class="hud-bottom">
 <div class="view-bottom"><div class="legend glass"><div id="scalarLegend"><div class="legend-title"><span id="legendName">Relative air speed</span><i id="legendSymbol">u/U∞</i></div><div class="gradient" id="gradient"></div><small><span id="legendLow">0.4</span><span id="legendMid">1.0</span><span id="legendHigh">1.6</span></small></div><div id="floorKey"><i class="tracer-key"></i>Undertray tracers</div></div><span class="hint"><svg class="icon"><use href="#orbit"/></svg>Drag to orbit &nbsp;·&nbsp; Scroll to zoom</span></div>
-<section class="telemetry glass"><div class="tele-head"><div class="section-top"><svg class="icon"><use href="#pulse"/></svg><h2>Aerodynamic telemetry</h2></div><span>Model estimates</span><button id="teleToggle" aria-controls="readouts" aria-expanded="true" aria-label="Toggle telemetry" title="Toggle telemetry"><svg class="icon"><use href="#down"/></svg></button></div>
+<section class="telemetry glass"><div class="tele-head"><div class="section-top"><svg class="icon"><use href="#pulse"/></svg><h2>Aerodynamic telemetry</h2></div><a class="physics-link" href="physics.html#demo">Physics guide</a><button id="teleToggle" aria-controls="readouts" aria-expanded="true" aria-label="Toggle telemetry" title="Toggle telemetry"><svg class="icon"><use href="#down"/></svg></button></div>
 <div class="metrics" id="readouts"><div class="metric"><div class="tele-label">Reynolds number</div><div class="reading"><span id="reynolds">—</span><small>×10⁶</small></div><div class="tele-caption">Re · car length</div></div><div class="metric"><div class="tele-label">Drag coefficient</div><div class="reading" id="cd">—</div><div class="tele-caption">Cᴅ · wind axis</div></div><div class="metric"><div class="tele-label">Lift coefficient</div><div class="reading" id="cl">—</div><div class="tele-caption">Cʟ · upward positive</div></div><div class="metric"><div class="tele-label">Drag force</div><div class="reading"><span id="drag">—</span><small>kN</small></div><div class="tele-caption">D · aerodynamic drag</div></div><div class="metric"><div class="tele-label">Downforce</div><div class="reading"><span id="force">—</span><small>kN</small></div><div class="tele-caption">−L · vertical load</div></div></div></section>
 <div class="footer"><span><i></i><span id="solverStatus" role="status">Initializing flow field</span></span><span>ρ 1.225 kg/m³ &nbsp;·&nbsp; 15 °C</span></div>
 </div>
