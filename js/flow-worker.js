@@ -1,3 +1,4 @@
+import {integratePressure} from './aero-telemetry.js';
 // Solve a velocity potential on a regular grid. Solid cells have zero normal flux.
 const nx=72, ny=41, nz=43, h=0.12, slice=nx*ny, n=slice*nz;
 const x0=-(nx-1)*h/2, y0=-(ny-1)*h/2, z0=-(nz-1)*h/2;
@@ -70,5 +71,6 @@ self.onmessage=({data})=>{
     texels[4*q+1]=255;
   }
   const pressure={texels,dimensions:[nx,ny,nz],origin:[x0,y0,z0],spacing:h};
-  self.postMessage({paths,pressure},[texels.buffer,...paths.map(p=>p.buffer)]);
+  const loads=integratePressure(solid,vel,nx,ny,nz,h);
+  self.postMessage({paths,pressure,loads},[texels.buffer,...paths.map(p=>p.buffer)]);
 };
