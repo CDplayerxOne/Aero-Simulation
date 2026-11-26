@@ -1,19 +1,17 @@
 import {localDescription,remoteDescription,drawCode,neutral,readInput} from './controller-link.js';
+import {signal} from './pairing-api.js';
 export function createControllerHost({onAction,onLoss,getMode}){
   const el=id=>document.getElementById(id);
-  let peer,channel,stream,scanTimer,lastPacket=0,input=neutral(),sentMode='',waitingTimer,scanVersion=0;
+  let peer,channel,room,lastPacket=0,input=neutral(),sentMode='',waitingTimer;
   function status(message){el('pairStatus').textContent=message}
-  function stopCamera(){
-    scanVersion++;
-    clearTimeout(scanTimer);
-    stream?.getTracks().forEach(track=>track.stop());
-    stream=null;el('answerCamera').srcObject=null;el('answerCamera').hidden=true;
+  function cancelRoom(token){
+    if(token)void signal('cancel',{token}).catch(()=>{});
   }
   function reset(){
-    stopCamera();clearTimeout(waitingTimer);
+    clearTimeout(waitingTimer);cancelRoom(room?.token);room=null;
     const old=peer;peer=null;channel=null;old?.close();
     lastPacket=0;input=neutral();sentMode='';
-    el('pairSteps').hidden=true;el('pairAnswer').value='';el('applyAnswer').disabled=false;
+    el('pairSteps').hidden=true;
     el('endPair').hidden=true;el('makePair').hidden=false;
   }
   function lost(){
@@ -27,7 +25,7 @@ export function createControllerHost({onAction,onLoss,getMode}){
       const data=session.createDataChannel('groundline-controls');channel=data;
       data.onopen=()=>{
         if(session!==peer)return;
-        stopCamera();clearTimeout(waitingTimer);lastPacket=performance.now();
+        clearTimeout(waitingTimer);cancelRoom(room?.token);room=null;lastPacket=performance.now();
         el('pairSteps').hidden=true;status('Phone connected.');data.send(JSON.stringify({mode:getMode()}));
       };
       data.onmessage=event=>{
@@ -41,57 +39,43 @@ export function createControllerHost({onAction,onLoss,getMode}){
       session.onconnectionstatechange=()=>{if(session===peer&&session.connectionState==='failed')lost()};
       const offer=await localDescription(session,'offer');
       if(session!==peer)return;
-      const url=new URL('controller.html',location.href);url.hash=offer;
-      el('pairLink').value=url.href;
-      el('pairSteps').hidden=false;
-      try{await drawCode(el('offerQr'),url.href);el('offerQr').hidden=false}catch{el('offerQr').hidden=true}
-      if(session===peer)status('On the same Wi-Fi, open this link on your phone or scan the QR code.');
+      const created=await signal('create',{offer});
+      if(session!==peer){cancelRoom(created.token);return}
+      room=created;
+      const url=new URL('controller.html',location.href);url.searchParams.set('code',room.code);
+      el('pairCode').textContent=room.code.slice(0,3)+' '+room.code.slice(3);
+      el('pairSteps').hidden=false;el('offerQr').hidden=true;
+      status('Waiting for your phone…');
+      drawCode(el('offerQr'),url.href).then(()=>{if(session===peer)el('offerQr').hidden=false}).catch(()=>{});
+      waitForPhone(session,created);
     }catch(error){if(session===peer||!peer){reset();status(error.message||'Pairing could not start.')}}
   }
-  async function accept(code){
-    const session=peer;if(!session||el('applyAnswer').disabled)return;
-    stopCamera();el('applyAnswer').disabled=true;
+  async function waitForPhone(session,created){
+    if(session!==peer)return;
     try{
-      await remoteDescription(session,'answer',code);
-      if(peer!==session)return;
-      status('Connecting to phone…');
-      if(channel.readyState!=='open')waitingTimer=setTimeout(()=>{
-        if(peer===session&&channel.readyState!=='open'){reset();status('Connection timed out. Use the same Wi-Fi with device-to-device access, then pair again.')}
-      },15000);
-    }catch{if(peer===session){el('applyAnswer').disabled=false;status('Could not read the return code. Paste it again or start a new pairing.')}}
-  }
-  async function scan(){
-    stopCamera();const version=scanVersion;
-    try{
-      const media=await navigator.mediaDevices.getUserMedia({video:true,audio:false});
-      if(version!==scanVersion){media.getTracks().forEach(t=>t.stop());return}
-      stream=media;
-      await import('../vendor/pairing/jsQR.js');
-      if(version!==scanVersion)return;
-      const video=el('answerCamera');video.srcObject=media;video.hidden=false;await video.play();
-      const frame=document.createElement('canvas'),ctx=frame.getContext('2d',{willReadFrequently:true});
-      function read(){
-        if(version!==scanVersion)return;
-        if(video.videoWidth){
-          frame.width=Math.min(800,video.videoWidth);frame.height=Math.round(frame.width*video.videoHeight/video.videoWidth);
-          ctx.drawImage(video,0,0,frame.width,frame.height);
-          const pixels=ctx.getImageData(0,0,frame.width,frame.height);
-          const result=globalThis.jsQR(pixels.data,frame.width,frame.height,{inversionAttempts:'dontInvert'});
-          if(result?.data.startsWith('GL1-')){accept(result.data);return}
-        }
-        scanTimer=setTimeout(read,125);
+      if(Date.now()>=created.expires)throw Error('Code expired. Create a new code to pair.');
+      let response;
+      try{response=await signal('poll',{token:created.token})}
+      catch(error){if(error.status && error.status<500)throw error}
+      if(session!==peer)return;
+      if(!response?.answer){
+        waitingTimer=setTimeout(()=>waitForPhone(session,created),1200);
+        return;
       }
-      read();
-    }catch{if(version===scanVersion){stopCamera();status('Camera unavailable. Paste the return code from your phone.')}}
+      status('Connecting to your phone…');
+      await remoteDescription(session,'answer',response.answer);
+      if(session!==peer||channel.readyState==='open')return;
+      waitingTimer=setTimeout(()=>{
+        if(session===peer&&channel.readyState!=='open'){
+          reset();status('Connection timed out. Check that both devices are on the same Wi-Fi and create a new code.');
+        }
+      },20000);
+    }catch(error){if(session===peer){reset();status(error.message)}}
   }
   el('makePair').onclick=pair;
   el('endPair').onclick=()=>{const connected=channel?.readyState==='open';reset();status('Pairing ended.');if(connected)onLoss()};
-  el('readQr').onclick=scan;
-  el('applyAnswer').onclick=()=>accept(el('pairAnswer').value);
-  el('copyPair').onclick=async()=>{try{await navigator.clipboard.writeText(el('pairLink').value);status('Link copied. Open it on your phone.')}catch{el('pairLink').select()}};
   addEventListener('pagehide',reset);
   return {
-    stopCamera,
     current(){
       if(performance.now()-lastPacket>350)return neutralState;
       return input;

@@ -217,7 +217,7 @@ kbd { color: var(--text); }
 #garagePair { margin-top: 8px; }
 #phoneDetails { border-block: 1px solid var(--edge-line); padding: 12px 0; margin-top: 16px; }
 #phoneDetails summary { color: var(--accent); cursor: pointer; font-weight: 600; }
-#phoneDetails label { display: block; font-size: .875rem; margin-top: 8px; }
-#phoneDetails input, #phoneDetails textarea { display: block; width: 100%; background: var(--night); color: var(--text); border: 1px solid var(--edge-line); border-radius: 7px; padding: 7px; }
 #phoneDetails .button { margin: 5px 0; }
-#offerQr, #answerCamera { display: block; width: min(100%, 290px); height: auto; margin: 8px auto; image-rendering: pixelated; }
+#pairCode { display: block; font: 600 2.4rem monospace; letter-spacing: .1em; color: var(--accent); }
+#offerQr { display: block; width: min(100%, 150px); height: auto; margin: 8px 0; image-rendering: pixelated; }
+#offerQr[hidden] { display: none; }

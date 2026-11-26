@@ -1,6 +1,7 @@
-import {localDescription,remoteDescription,drawCode,neutral,wheelAngle,wheelSteering} from './controller-link.js';
+import {localDescription,remoteDescription,neutral,wheelAngle,wheelSteering} from './controller-link.js';
+import {signal} from './pairing-api.js';
 const el=id=>document.getElementById(id);
-let peer,channel,timer,angle=null,center=null,tilt=0,motionEnabled=false;
+let peer,channel,timer,connectionTimer,angle=null,center=null,tilt=0,motionEnabled=false;
 const held=new Map();
 function send(packet){
   if(channel?.readyState==='open'&&channel.bufferedAmount<8192)channel.send(JSON.stringify(packet));
@@ -49,40 +50,46 @@ for(const b of document.querySelectorAll('[data-hold]')){
 }
 function disconnected(message){
   const old=peer;peer=null;channel=null;clearInterval(timer);old?.close();release();
-  el('pad').hidden=true;el('pairPhone').hidden=false;el('reply').hidden=true;el('join').disabled=false;
-  el('linkEntry').hidden=false;el('hostLink').value='';el('linkState').textContent='Disconnected';
+  el('pad').hidden=true;el('pairPhone').hidden=false;el('join').disabled=false;
+  clearTimeout(connectionTimer);el('linkState').textContent='Disconnected';
   el('pairHelp').textContent=message;
 }
-const offer=location.hash.slice(1);el('linkEntry').hidden=!!offer;
-el('join').onclick=async()=>{
-  const value=el('linkEntry').hidden?offer:el('hostLink').value.trim().split('#').pop();
-  if(!value){el('pairHelp').textContent='In the race garage, choose Pair phone and scan or paste the pairing link.';return}
+const codeInput=el('phoneCode');
+const preset=new URLSearchParams(location.search).get('code');
+if(/^\d{6}$/.test(preset))codeInput.value=preset;
+el('joinForm').onsubmit=async event=>{
+  event.preventDefault();
+  if(el('join').disabled)return;
+  const code=codeInput.value.trim();
+  if(!/^\d{6}$/.test(code)){codeInput.reportValidity();return}
   // iOS requires the motion prompt to start directly inside a tap handler.
   void enableMotion();
   el('join').disabled=true;el('linkState').textContent='Pairing…';
   let session;
   try{
     session=new RTCPeerConnection({iceServers:[]});peer=session;
+    const {offer}=await signal('join',{code});
+    if(peer!==session)return;
     session.ondatachannel=e=>{
       if(peer!==session)return;channel=e.channel;
       channel.onmessage=({data})=>{try{const packet=JSON.parse(data);if(typeof packet.mode==='string')updateMode(packet.mode)}catch{}};
       function connected(){
         if(peer!==session)return;
-        el('pad').hidden=false;el('pairPhone').hidden=true;el('linkState').textContent='Connected';
+        clearTimeout(connectionTimer);el('pad').hidden=false;el('pairPhone').hidden=true;el('linkState').textContent='Connected';
         clearInterval(timer);timer=setInterval(()=>{if(!document.hidden)sendInput()},40);sendInput();
       }
       channel.onopen=connected;if(channel.readyState==='open')connected();
       channel.onclose=()=>{if(peer===session)disconnected('Connection ended. Start a fresh pairing on the race computer.')};
     };
-    session.onconnectionstatechange=()=>{if(peer===session&&session.connectionState==='failed')disconnected('Could not connect. Use the same Wi-Fi and request a new link from the race computer.')};
-    await remoteDescription(session,'offer',value);
+    session.onconnectionstatechange=()=>{if(peer===session&&session.connectionState==='failed')disconnected('Could not connect. Use the same Wi-Fi and request a new code from the race computer.')};
+    await remoteDescription(session,'offer',offer);
     const answer=await localDescription(session,'answer');
     if(peer!==session)return;
-    el('replyCode').value=answer;el('reply').hidden=false;
-    try{await drawCode(el('returnQr'),answer)}catch{el('returnQr').hidden=true}
-    el('pairHelp').textContent='Finish pairing on the race computer.';
-  }catch(error){if(!peer||peer===session)disconnected(error.message||'Pairing failed. Request a fresh link and try again.')}
+    await signal('answer',{code,answer});
+    if(peer!==session||channel?.readyState==='open')return;
+    el('pairHelp').textContent='Connecting to your laptop…';
+    connectionTimer=setTimeout(()=>{if(peer===session)disconnected('Could not connect. Check that both devices share the same Wi-Fi, then get a new code.')},25000);
+  }catch(error){if(!peer||peer===session)disconnected(error.message||'Pairing failed. Request a new code and try again.')}
 };
-el('copyReturn').onclick=async()=>{try{await navigator.clipboard.writeText(el('replyCode').value);el('copyReturn').textContent='Copied'}catch{el('replyCode').select()}};
 document.addEventListener('visibilitychange',()=>{if(document.hidden)release()});
 addEventListener('blur',release);addEventListener('pagehide',()=>{release();peer?.close()});

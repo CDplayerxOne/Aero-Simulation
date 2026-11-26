@@ -124,7 +124,6 @@ $('garagePair').onclick=()=>{
   if(!$('makePair').hidden)$('makePair').click();
   $('phoneDetails').scrollIntoView({block:'nearest'});
 };
-$('phoneDetails').ontoggle=()=>{if(!$('phoneDetails').open)phone.stopCamera()};
 function openControls(launch=false){
  if(controlsDialog.open)return;
  launchAfterControls=launch;
@@ -136,7 +135,6 @@ function openControls(launch=false){
 $('controlsButton').onclick=()=>openControls();
 $('controlsDone').onclick=()=>controlsDialog.close('done');
 controlsDialog.onclose=()=>{
- phone.stopCamera();
  const confirmed=controlsDialog.returnValue==='done';
  if(confirmed)briefed=true;
  if(launchAfterControls&&confirmed)begin();

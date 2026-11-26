@@ -2,10 +2,10 @@
 <html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#111c2a"><title>Phone controller · Groundline</title><link rel="icon" href="brand.svg"><link rel="stylesheet" href="style.css"><link rel="stylesheet" href="controller.css"></head>
 <body><main class="handset">
 <header><a class="wordmark glass" href="./" aria-label="Groundline home"><img src="brand.svg" alt="">Groundline</a><span id="linkState" role="status">Pairing</span></header>
-<section id="pairPhone" class="glass phone-panel"><h1>Phone controller</h1><p id="pairHelp">Connect to the same Wi-Fi as the race computer, then tap Pair. Hold the phone like a steering wheel.</p>
-<label id="linkEntry" hidden>Pairing link from the race computer<input id="hostLink" type="text" autocomplete="off" spellcheck="false"></label>
-<button id="join" class="button primary">Pair phone</button>
-<div id="reply" hidden><h2>Return code</h2><p>On the race computer choose <strong>Scan phone code</strong> and show its camera this square. You can also copy the code to the computer and paste it there.</p><canvas id="returnQr" aria-label="Return pairing QR code"></canvas><textarea id="replyCode" readonly aria-label="Return pairing code"></textarea><button class="button secondary" id="copyReturn">Copy return code</button></div></section>
+<section id="pairPhone" class="glass phone-panel"><h1>Phone controller</h1><p id="pairHelp">On your laptop, choose <strong>Pair phone</strong> in the garage. Connect both devices to the same Wi-Fi and sign in to the same Groundline site account.</p>
+<form id="joinForm"><label for="phoneCode">Six-digit garage code</label>
+<input id="phoneCode" name="code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" enterkeyhint="go" placeholder="000000" required>
+<button id="join" type="submit" class="button primary">Pair phone</button></form></section>
 <section id="pad" class="glass phone-panel" hidden><h1>Race controller</h1><p id="motionStatus">Hold the phone upright like a wheel.</p>
 <div class="wheel-meter" aria-label="Steering position"><i id="wheelMarker"></i></div>
 <div class="utility"><button class="button secondary" id="motion">Enable tilt</button><button class="button secondary" id="center">Recenter</button><button class="button secondary" id="mainAction">Start race</button><button class="button secondary" data-action="camera">Camera</button><button class="button secondary" data-action="recover">Recover</button></div>

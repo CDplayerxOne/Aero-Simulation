@@ -83,16 +83,12 @@
       <details id="phoneDetails">
         <summary>Phone controller</summary>
         <p id="pairStatus" role="status">Use a phone on the same Wi-Fi to steer and operate the pedals.</p>
-        <button id="makePair" class="button secondary">Create pairing link</button>
+        <button id="makePair" class="button secondary">Create pairing code</button>
         <div id="pairSteps" hidden>
-          <canvas id="offerQr" aria-label="Scan to open the phone controller"></canvas>
-          <label>Phone link<input id="pairLink" readonly></label>
-          <button id="copyPair" class="button secondary">Copy link</button>
-          <p>Tap <strong>Pair phone</strong> on the phone. Scan its return code with this computer’s camera, or paste the code below.</p>
-          <button id="readQr" class="button secondary">Scan phone code</button>
-          <video id="answerCamera" muted playsinline hidden></video>
-          <label>Return code<textarea id="pairAnswer" rows="2" spellcheck="false"></textarea></label>
-          <button id="applyAnswer" class="button secondary">Connect phone</button>
+          <p>On your phone, open Groundline and choose <strong>Phone controller</strong>. Enter this code within five minutes.</p>
+          <output id="pairCode" aria-label="Phone pairing code"></output>
+          <p>Or scan with your phone to fill it in.</p>
+          <canvas id="offerQr" hidden aria-label="Scan with your phone to open the controller"></canvas>
         </div>
         <button id="endPair" class="button secondary" hidden>Disconnect / cancel</button>
       </details>

@@ -1,4 +1,4 @@
-// Gather LAN candidates before exchanging descriptions so pairing works on static hosting.
+// Gather LAN candidates before exchanging descriptions so the peer can connect with one exchange.
 export async function localDescription(peer, type){
   const description=type==='offer'?await peer.createOffer():await peer.createAnswer();
   await peer.setLocalDescription(description);
@@ -27,7 +27,7 @@ export async function localDescription(peer, type){
 }
 export async function remoteDescription(peer,type,value){
   const code=value.trim();
-  if(!/^GL1-[ZT][\w-]{20,24000}$/.test(code))throw Error('Use the complete pairing code from the other device.');
+  if(!/^GL1-[ZT][\w-]{20,24000}$/.test(code))throw Error('Invalid connection details. Create a new pairing code.');
   const bytes=Uint8Array.from(atob(code.slice(5).replaceAll('-','+').replaceAll('_','/')),c=>c.charCodeAt(0));
   let buffer=bytes;
   if(code[4]==='Z'){
